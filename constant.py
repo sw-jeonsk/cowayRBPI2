@@ -66,6 +66,13 @@ ZONE = {"zone_1": 2, "zone_2": 3, "zone_3": 4, "zone_4": 5}
 minPSI = 0.8
 maxPSI = 2.2
 
+
+#media
+IDLE = "/home/pi/Desktop/github/media/idle.mov"
+BEDTIME = "/home/pi/Desktop/github/media/bedtime.mov"
+ALIGNMENT = "/home/pi/Desktop/github/media/alignment.mov"
+WAKEUP = "/home/pi/Desktop/github/media/wakeup.mov"
+
 class joB:
     def __init__(self, _json, _socket, _sendData ):
         self.m_JSON = _json

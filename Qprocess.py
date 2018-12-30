@@ -7,6 +7,7 @@ import constant
 import json
 import logging
 import datetime
+import media
 
 from gpio import psi
 from gpio import sol
@@ -28,7 +29,7 @@ class Qprocess(threading.Thread):
         self.m_reclinerHead = reclinerHead.reclinerHead(constant.headGPIO) 
         self.m_led = led.led(constant.ledGPIO, constant.frequency)
         self.m_purifier = purifier.purifier(constant.purifierGPIO)
-
+        
         self.m_isMode = False
         self.m_StartTime = 0
         self.m_EndTime = 0
@@ -38,11 +39,13 @@ class Qprocess(threading.Thread):
         self.m_count = 0
         self.m_zoneFlag = {"1":False, "2":False, "3":False, "4":False}
 
+        self.m_media = media.media()
 
     def run(self):
 
         logging.info("Qprocess Running..")
 
+        self.m_media.IDLE()
         while(True):
 
             constant.lock.acquire()
@@ -372,6 +375,9 @@ class Qprocess(threading.Thread):
             logging.info("HEAD down Time : " + str(constant.reclinerHeadDownDelay) + " FOOT down Time : " + str(constant.reclinerFootDownDelay))
             logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
 
+            #media
+            self.m_media.KILL()
+            self.m_media.BEDTIME()
 
             self.m_StartTime = datetime.datetime.now()
 
@@ -392,10 +398,16 @@ class Qprocess(threading.Thread):
             self.m_reclinerHead.STOP()         
             self.m_reclinerFoot.STOP()
 
+
+            self.m_media.KILL()
+            self.m_media.IDLE()
             
         elif _power == "stop":
             logging.info("------------bed Time Stop-------------")
+            self.m_media.KILL()
+            self.m_media.IDLE()
 
+            
             self.m_EndTime = datetime.datetime.now()
             self.m_reclinerFoot.UP()
             self.m_reclinerHead.UP()
