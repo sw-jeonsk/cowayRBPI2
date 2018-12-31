@@ -560,6 +560,9 @@ class Qprocess(threading.Thread):
 
             self.m_pump.pumpOFF(False)
             self.m_sol.OFF(5, True)
+
+            self.m_media.KILL()
+            self.m_media.IDLE()
         else: # _power stop
             logging.info("------------Alignment Stop-------------")
 
@@ -709,6 +712,9 @@ class Qprocess(threading.Thread):
 
             self.m_reclinerHead.STOP()         
             self.m_reclinerFoot.STOP()
+
+            self.m_media.KILL()
+            self.m_media.IDLE()
 
         elif _power == "stop":
 
