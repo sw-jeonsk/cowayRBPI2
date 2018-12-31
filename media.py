@@ -16,7 +16,8 @@ class media:
 
     def BEDTIME(self):
         os.system('omxplayer  --aspect-mode fill ' + self.m_bedtime + " &")
-
+    def ALIGN(self):
+        os.system('omxplayer  --aspect-mode fill ' + self.m_align + " &")
     def WAKEUP(self):
         os.system('omxplayer  --aspect-mode fill ' + self.m_wakeup + " &")
 
