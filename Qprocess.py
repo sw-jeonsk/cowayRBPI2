@@ -7,7 +7,7 @@ import constant
 import json
 import logging
 import datetime
-import media
+# import media
 
 from gpio import psi
 from gpio import sol
@@ -39,7 +39,7 @@ class Qprocess(threading.Thread):
         self.m_count = 0
         self.m_zoneFlag = {"1":False, "2":False, "3":False, "4":False}
 
-        self.m_media = media.media()
+        # self.m_media = media.media()
 
     def run(self):
 
@@ -375,9 +375,7 @@ class Qprocess(threading.Thread):
             logging.info("HEAD down Time : " + str(constant.reclinerHeadDownDelay) + " FOOT down Time : " + str(constant.reclinerFootDownDelay))
             logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
 
-            #media
-            self.m_media.KILL()
-            self.m_media.BEDTIME()
+           
 
             self.m_StartTime = datetime.datetime.now()
 
@@ -399,13 +397,9 @@ class Qprocess(threading.Thread):
             self.m_reclinerFoot.STOP()
 
 
-            self.m_media.KILL()
-            self.m_media.IDLE()
             
         elif _power == "stop":
             logging.info("------------bed Time Stop-------------")
-            self.m_media.KILL()
-            self.m_media.IDLE()
 
 
             self.m_EndTime = datetime.datetime.now()
@@ -438,8 +432,6 @@ class Qprocess(threading.Thread):
         self.m_isMode = True
         if _power == "start":
 
-            self.m_media.KILL()
-            self.m_media.ALIGN()
             logging.info("------------Alignment Start-------------")
             logging.info("analysis Time : " + str(constant.analysisDelay) + " AIR INPUT TOTAL TIME(MS) : " + str(zoneMSTime))
             #logging.info("Zone_1 Time : " + str(constant.open_zone_1) + " Zone_2 Time : " + str(constant.open_zone_2) + " Zone_3 Time : " + str(constant.open_zone_3) + " Zone_4 Time : " + str(constant.open_zone_4))
@@ -561,13 +553,9 @@ class Qprocess(threading.Thread):
             self.m_pump.pumpOFF(False)
             self.m_sol.OFF(5, True)
 
-            self.m_media.KILL()
-            self.m_media.IDLE()
         else: # _power stop
             logging.info("------------Alignment Stop-------------")
 
-            self.m_media.KILL()
-            self.m_media.IDLE()
 
             self.m_EndTime = datetime.datetime.now()
 
@@ -688,8 +676,6 @@ class Qprocess(threading.Thread):
 
         if(_power == "start"):
 
-            self.m_media.KILL()
-            self.m_media.WAKEUP()
             logging.info("------------wake Up Start-------------")
             logging.info("HEAD down Time : " + str(constant.reclinerHeadUpDelay) + " FOOT down Time : " + str(constant.reclinerFootUpDelay))
             logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
@@ -713,15 +699,11 @@ class Qprocess(threading.Thread):
             self.m_reclinerHead.STOP()         
             self.m_reclinerFoot.STOP()
 
-            self.m_media.KILL()
-            self.m_media.IDLE()
 
         elif _power == "stop":
 
             logging.info("------------wake Up Stop-------------")
 
-            self.m_media.KILL()
-            self.m_media.IDLE()
 
             self.m_EndTime = datetime.datetime.now()
 
