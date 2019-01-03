@@ -45,7 +45,6 @@ class Qprocess(threading.Thread):
 
         logging.info("Qprocess Running..")
 
-        self.m_media.IDLE()
         while(True):
 
             constant.lock.acquire()
