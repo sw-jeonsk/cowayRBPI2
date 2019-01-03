@@ -5,7 +5,7 @@ import time
 import client
 import Qprocess
 import logging
-logging.basicConfig(filename='/home/pi/Desktop/github/cowayRBPI/log/cowayRBPI.log', 
+logging.basicConfig(filename='/home/pi/Desktop/github/cowayRBPI2/log/cowayRBPI.log', 
 filemode='a', level=logging.DEBUG, format='[%(asctime)s][%(levelname)s] %(message)s')
 
 logging.info("Server Start..")
