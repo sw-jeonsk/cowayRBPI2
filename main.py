@@ -11,7 +11,7 @@ filemode='a', level=logging.DEBUG, format='[%(asctime)s][%(levelname)s] %(messag
 logging.info("Server Start..")
 #todo client socket select로 처리하여,, recv데이터 send데이터 각자 놀도록 
 def main():
-    ip = "192.168.0.115"
+    ip = "192.168.1.9"
     port = 1113
     socketServer = server.socketServer(ip, port) 
     #TEST  
