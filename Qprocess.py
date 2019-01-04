@@ -40,7 +40,7 @@ class Qprocess(threading.Thread):
         self.m_zoneFlag = {"1":False, "2":False, "3":False, "4":False}
 
 
-        self.DeviceInit()
+        #self.DeviceInit()
         # self.m_media = media.media()
     def DeviceInit(self):
         
