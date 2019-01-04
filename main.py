@@ -27,6 +27,7 @@ def main():
             
             socketServer.listen()
             clientSocket = socketServer.accept()
+            logging.info("CLIENT ACCEPT.....")
             newConn = client.socketClient(clientSocket)
             newConn.daemon = True
             newConn.start()

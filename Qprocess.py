@@ -29,7 +29,7 @@ class Qprocess(threading.Thread):
         self.m_reclinerHead = reclinerHead.reclinerHead(constant.headGPIO) 
         self.m_led = led.led(constant.ledGPIO, constant.frequency)
         self.m_purifier = purifier.purifier(constant.purifierGPIO)
-        
+        self.m_Data = constant.Data()
         self.m_isMode = False
         self.m_StartTime = 0
         self.m_EndTime = 0
@@ -39,7 +39,46 @@ class Qprocess(threading.Thread):
         self.m_count = 0
         self.m_zoneFlag = {"1":False, "2":False, "3":False, "4":False}
 
+
+        self.DeviceInit()
         # self.m_media = media.media()
+    def DeviceInit(self):
+        
+        logging.info("device init start.....")
+        #zone init....
+        if self.m_Data.value("zone_1") == "soft":
+            self.m_sol.multiON([1,2,3,4,5])
+        else:
+            self.m_pump.pumpON(True)
+            self.m_sol.multiON([2,3,4,5])
+
+        #recliner head
+        # if self.m_Data.value("head") == "up":
+        #     self.m_reclinerHead.UP()
+        # else:    
+        #     self.m_reclinerHead.DOWN()
+
+        # if self.m_Data.value("feet") == "up":
+        #     self.m_reclinerFeet.UP()
+        # else:    
+        #     self.m_reclinerFeet.DOWN()
+
+        if self.m_Data.value("purifier") == "on":
+            self.m_purifier.ON(True)
+        else:
+            self.m_purifier.OFF(True)
+        
+        if self.m_Data.value("led") == "on":
+            self.m_led.ledPWM(constant.ledBright)
+        else:
+            self.m_led.ledPWM(0)
+
+
+        for i in range(0, constant.InitDelay):
+            time.sleep(1)
+        
+        logging.info("device init end.....")
+
 
     def run(self):
 
@@ -146,7 +185,7 @@ class Qprocess(threading.Thread):
 
                     if(self.m_isMode):
                         self.m_isMode = False
-                        time.sleep(3)
+                        time.sleep(6)
 
                         thread = threading.Thread(target=self.alignEvent, args=(power, unit))
                         thread.start()   
@@ -274,7 +313,6 @@ class Qprocess(threading.Thread):
             self.m_sol.OFF(1,True)
             self.m_sol.OFF(constant.ZONE[_cmd], True) 
 
-
         elif(_power == "hard"):
             self.m_sol.ON(constant.ZONE[_cmd], True)
             self.m_pump.pumpON(True)
@@ -288,13 +326,13 @@ class Qprocess(threading.Thread):
                     break
                 time.sleep(0.1)
            
-
             self.m_sol.OFF(constant.ZONE[_cmd], True)
             self.m_pump.pumpOFF(True)        
 
         else:
             logging.error("parameter error")        
 
+        self.m_Data.change(_cmd, _power)
         self.m_zoneFlag[_index] = False
 
 
@@ -302,6 +340,11 @@ class Qprocess(threading.Thread):
         self.m_sol.multiON([1,2,3,4,5])
 
         time.sleep(constant.resetDelay)
+
+        self.m_Data.change("zone_1", "soft")
+        self.m_Data.change("zone_2", "soft")
+        self.m_Data.change("zone_3", "soft")
+        self.m_Data.change("zone_4", "soft")
 
         self.m_sol.multiOFF([1,2,3,4,5])
     def headEvent(self, _cmd, _power):
@@ -455,7 +498,10 @@ class Qprocess(threading.Thread):
             #2번 열고, 2초 측정시간 갖은 다음, Pump 주입 시작
             self.m_pump.pumpON(False)
             self.m_sol.ON(2, True)
-            time.sleep(constant.MeasureDelay)
+
+            if(self.m_isMode):
+                time.sleep(constant.MeasureDelay)
+
             zoneMSTime = zoneMSTime - constant.MeasureDelay * 10 
             volt = self.m_psi.getVoltage()
             logging.info("INDEX 2 OPEN Measure Volt : " + str(volt))
@@ -481,7 +527,10 @@ class Qprocess(threading.Thread):
             ########################################################
 
             self.m_sol.ON(3, True)
-            time.sleep(constant.MeasureDelay)
+            
+            if(self.m_isMode):
+                time.sleep(constant.MeasureDelay)
+
             zoneMSTime = zoneMSTime - constant.MeasureDelay * 10 
 
             volt = self.m_psi.getVoltage()
@@ -504,7 +553,10 @@ class Qprocess(threading.Thread):
 
             ##########################################################
             self.m_sol.ON(4, True)
-            time.sleep(constant.MeasureDelay)
+
+            if(self.m_isMode):
+                time.sleep(constant.MeasureDelay)
+
             zoneMSTime = zoneMSTime - constant.MeasureDelay * 10 
             volt = self.m_psi.getVoltage()
             logging.info("INDEX 4 OPEN Measure Volt : " + str(volt))
@@ -530,7 +582,10 @@ class Qprocess(threading.Thread):
             ##########################################################
 
             self.m_sol.ON(5,True)
-            time.sleep(constant.MeasureDelay)
+
+            if(self.m_isMode):
+                time.sleep(constant.MeasureDelay)
+
             zoneMSTime = zoneMSTime - constant.MeasureDelay * 10 
             volt = self.m_psi.getVoltage()
             logging.info("INDEX 5 OPEN Measure Volt : " + str(volt))
