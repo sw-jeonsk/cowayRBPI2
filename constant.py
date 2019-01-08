@@ -12,15 +12,13 @@ InitDelay = 20 #second
 ledGPIO = 12
 pumpGPIO = 7
 solGPIO= [11,13,15,29,31,33,35,37,40]
-headGPIO = [32, 26]
-footGPIO = [22, 18]
+
+#변경됨 
+footGPIO = [32, 26]
+headGPIO = [22, 18]
 purifierGPIO = 16
 
 #bedTime
-reclinerUpDelay = 27 #second
-reclinerDownDelay = 27 #second
-reclinerHeadDownDelay = 15 #second
-reclinerFootDownDelay = 15 #second
 bedTimeBrightStart = 100
 bedTimeBrightEnd = 0
 
@@ -41,14 +39,15 @@ MeasureDelay = 1 #second
 resetDelay    = 10 #second
 
 #wakeup
-reclinerHeadUpDelay = 15 #second
-reclinerFootUpDelay = 15 #second
 wakeUpBrightStart = 0
 wakeUpBrightEnd = 100
 
 #recliner
-maxUpDelay = 27 #second
-maxDownDelay = 27 #second
+HeadUp = 21 #second
+HeadDown = 20 #second
+WaitTime = 2
+FootUp = 6
+FootDown = 4
 
 #recliner
 maxHeadUpTime   = 5 #second

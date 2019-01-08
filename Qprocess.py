@@ -34,6 +34,7 @@ class Qprocess(threading.Thread):
         self.m_StartTime = 0
         self.m_EndTime = 0
 
+        self.m_isOperation = False
         self.headMode = False
         self.footMode = False
         self.m_count = 0
@@ -126,16 +127,17 @@ class Qprocess(threading.Thread):
                     unit.CLIENT()
 
                 elif "head" in cmd:
-                    
-                       
-                    if(self.headMode == False):
 
+                    if(self.headMode == False and self.m_isOperation == False):
+
+                        self.m_isOperation = True
+                        self.headMode = True  
                         #시작 단계일듯...
                         self.m_StartTime = datetime.datetime.now()
                         thread = threading.Thread(target=self.headEvent, args=(cmd, power))
                         thread.start()             
-                        pass            
-                    else:
+                        
+                    elif(self.headMode == True):
                         self.headMode = False
 
                         time.sleep(2)
@@ -146,21 +148,24 @@ class Qprocess(threading.Thread):
 
                 elif "foot" in cmd:
 
-                    if(self.footMode == False):
 
+                    if(self.footMode == False and self.m_isOperation == False):
+                        self.footMode= True
+                        self.m_isOperation = True
                         #시작 단계일듯...
                         thread = threading.Thread(target=self.footEvent, args=(cmd, power))
                         thread.start()             
-                        pass            
-                    else:
+                        
+                    elif(self.footMode == True):
                         self.footMode = False
+                    
 
                         time.sleep(2)
                         self.m_EndTime = datetime.datetime.now()
 
                         thread = threading.Thread(target=self.footEvent, args=(cmd, power))
                         thread.start()   
-                        
+                    
                          
                 elif "light" in cmd:
                     self.lightEvent(power)
@@ -350,7 +355,6 @@ class Qprocess(threading.Thread):
     def headEvent(self, _cmd, _power):
         
         self.m_reclinerHead.STOP()
-        self.headMode = True  
 
         if _cmd == "head":
 
@@ -359,7 +363,7 @@ class Qprocess(threading.Thread):
                 if _power == "up":
                     self.m_reclinerHead.UP()
 
-                    for i in range(0, constant.maxUpDelay * 10):
+                    for i in range(0, constant.HeadUp * 10):
                         if(self.headMode == False):
                             break
                         time.sleep(0.1)
@@ -367,13 +371,14 @@ class Qprocess(threading.Thread):
                 elif _power == "down":
                     self.m_reclinerHead.DOWN()
 
-                    for i in range(0, constant.maxDownDelay * 10):
+                    for i in range(0, constant.HeadDown * 10):
                         if(self.headMode == False):
                             break
                         time.sleep(0.1)
 
 
         self.headMode = False 
+        self.m_isOperation = False
         self.m_reclinerHead.STOP()
         logging.info("headevent end---------------------")
  
@@ -390,7 +395,7 @@ class Qprocess(threading.Thread):
                 if _power == "up":
                     self.m_reclinerFoot.UP()
 
-                    for i in range(0, constant.maxUpDelay * 10):
+                    for i in range(0, constant.FootUp * 10):
                         if(self.footMode == False):
                             break
                         time.sleep(0.1)
@@ -398,12 +403,13 @@ class Qprocess(threading.Thread):
                 elif _power == "down":
                     self.m_reclinerFoot.DOWN()
 
-                    for i in range(0, constant.maxDownDelay * 10):
+                    for i in range(0, constant.FootDown * 10):
                         if(self.footMode == False):
                             break
                         time.sleep(0.1)
 
         self.footMode = False 
+        self.m_isOperation = False
         self.m_reclinerFoot.STOP()
         logging.info("footevent end---------------------")
 
@@ -414,7 +420,8 @@ class Qprocess(threading.Thread):
         self.m_isMode = True
         if(_power == "start"):
             logging.info("------------bed Time Start-------------")
-            logging.info("HEAD down Time : " + str(constant.reclinerHeadDownDelay) + " FOOT down Time : " + str(constant.reclinerFootDownDelay))
+            logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
+            logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
             logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
 
            
@@ -422,10 +429,26 @@ class Qprocess(threading.Thread):
             self.m_StartTime = datetime.datetime.now()
 
             self.m_reclinerHead.DOWN()
+
+            for i in range(0, constant.HeadDown * 10):
+                if self.m_isMode:
+                    if(i%2 == 0 and start >= 0): 
+                        logging.info("BRIGHT : " + str(start))  
+                        self.m_led.ledPWM(start)
+                        start = start - constant.duty     
+                    time.sleep(0.1)
+                else:
+                    break
+
+            self.m_reclinerHead.STOP() 
+            for i in range(0, constant.WaitTime * 10):
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
             self.m_reclinerFoot.DOWN()
 
 
-            for i in range(0, constant.reclinerDownDelay * 10):
+            for i in range(0, constant.FootDown * 10):
                 if self.m_isMode:
                     if(i%2 == 0 and start >= 0): 
                         logging.info("BRIGHT : " + str(start))  
@@ -438,7 +461,10 @@ class Qprocess(threading.Thread):
             self.m_reclinerHead.STOP()         
             self.m_reclinerFoot.STOP()
 
-
+            for i in range(0, constant.WaitTime * 10):
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
             
         elif _power == "stop":
             logging.info("------------bed Time Stop-------------")
@@ -731,15 +757,15 @@ class Qprocess(threading.Thread):
         if(_power == "start"):
 
             logging.info("------------wake Up Start-------------")
-            logging.info("HEAD down Time : " + str(constant.reclinerHeadUpDelay) + " FOOT down Time : " + str(constant.reclinerFootUpDelay))
+            logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
+            logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
             logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
 
             self.m_StartTime = datetime.datetime.now()
 
             self.m_reclinerHead.UP()
-            self.m_reclinerFoot.UP()
 
-            for i in range(0, constant.reclinerUpDelay * 10):
+            for i in range(0, constant.HeadUp * 10):
                 if self.m_isMode:
                     
                     if(i%2 == 0 and  start  <= 100 ): 
@@ -750,8 +776,36 @@ class Qprocess(threading.Thread):
                 else:
                     break
 
+
+            self.m_reclinerHead.STOP()
+
+            for i in range(0, constant.WaitTime * 10):
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
+
+            self.m_reclinerFoot.UP()
+
+
+            for i in range(0, constant.FootUp * 10):
+                if self.m_isMode:
+                    
+                    if(i%2 == 0 and  start  <= 100 ): 
+                        logging.info("BRIGHT : " + str(start)) 
+                        self.m_led.ledPWM(start)
+                        start = start + constant.duty        
+                    time.sleep(0.1)
+                else:
+                    break
+
+
             self.m_reclinerHead.STOP()         
             self.m_reclinerFoot.STOP()
+
+            for i in range(0, constant.WaitTime * 10):
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
 
 
         elif _power == "stop":
