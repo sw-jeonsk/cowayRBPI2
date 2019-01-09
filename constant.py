@@ -13,9 +13,15 @@ ledGPIO = 12
 pumpGPIO = 7
 solGPIO= [11,13,15,29,31,33,35,37,40]
 
-#변경됨 
-footGPIO = [32, 26]
-headGPIO = [22, 18]
+#ORIGINAL 
+headGPIO = [32, 26]
+footGPIO = [22, 18]
+
+#CHANGE
+# footGPIO = [32, 26]
+# headGPIO = [22, 18]
+
+
 purifierGPIO = 16
 
 #bedTime
@@ -32,7 +38,7 @@ open_zone_4 = 7 #second
 zone_interval = 1 #second
 
 ######control
-modeStopDelay = 5 #second
+modeStopDelay = 3 #second
 zoneSoftDelay = 5 #second
 zoneHardDelay = 5 #second
 MeasureDelay = 1 #second
@@ -50,10 +56,6 @@ FootUp = 6
 FootDown = 4
 
 #recliner
-maxHeadUpTime   = 5 #second
-maxHeadDownTime = 5 #second
-maxFootUpTime   = 5 #second
-maxFootDownTime = 5 #second
 
 #led 
 ledBright = 80

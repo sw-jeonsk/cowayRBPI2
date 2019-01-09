@@ -53,17 +53,6 @@ class Qprocess(threading.Thread):
             self.m_pump.pumpON(True)
             self.m_sol.multiON([2,3,4,5])
 
-        #recliner head
-        # if self.m_Data.value("head") == "up":
-        #     self.m_reclinerHead.UP()
-        # else:    
-        #     self.m_reclinerHead.DOWN()
-
-        # if self.m_Data.value("feet") == "up":
-        #     self.m_reclinerFeet.UP()
-        # else:    
-        #     self.m_reclinerFeet.DOWN()
-
         if self.m_Data.value("purifier") == "on":
             self.m_purifier.ON(True)
         else:
@@ -99,21 +88,6 @@ class Qprocess(threading.Thread):
                 logging.info('cmd : ' + cmd + " power : " + power)
 
                 if "zone_" in cmd:
-
-                    #THREAD로 구현
-                    # seperate = cmd.split("_")
-                    # if(self.m_zoneFlag[seperate[1]] == True):
-
-                    #     self.m_zoneFlag[seperate[1]] = False
-                    #     time.sleep(1.5)
-                    #     thread = threading.Thread(target=self.zoneEvent, args=(cmd, power, seperate[1]))
-                    #     thread.start()
-
-                    # else:
-
-                    #     time.sleep(0.5)
-                    #     thread = threading.Thread(target=self.zoneEvent, args=(cmd, power, seperate[1]))
-                    #     thread.start()     
 
 
 
@@ -190,7 +164,7 @@ class Qprocess(threading.Thread):
 
                     if(self.m_isMode):
                         self.m_isMode = False
-                        time.sleep(6)
+                        time.sleep(3)
 
                         thread = threading.Thread(target=self.alignEvent, args=(power, unit))
                         thread.start()   
@@ -469,23 +443,28 @@ class Qprocess(threading.Thread):
         elif _power == "stop":
             logging.info("------------bed Time Stop-------------")
 
-
-            self.m_EndTime = datetime.datetime.now()
-            self.m_reclinerFoot.UP()
-            self.m_reclinerHead.UP()
             
-            work_time = self.m_EndTime - self.m_StartTime
-            getbackTime = int(work_time.total_seconds())            
-
-            logging.info("[BEDTIME] get back work Time : " + str(getbackTime))
-            for i in range(0, getbackTime * 10):
-              
-                time.sleep(0.1)
-
-            self.m_led.ledPWM(100)
-
             self.m_reclinerFoot.STOP()
             self.m_reclinerHead.STOP()    
+
+            # self.m_EndTime = datetime.datetime.now()
+            # self.m_reclinerFoot.UP()
+            # self.m_reclinerHead.UP()
+            
+            # work_time = self.m_EndTime - self.m_StartTime
+            # getbackTime = int(work_time.total_seconds())            
+
+            # logging.info("[BEDTIME] get back work Time : " + str(getbackTime))
+            # for i in range(0, getbackTime * 10):
+              
+            #     time.sleep(0.1)
+
+            # self.m_led.ledPWM(100)
+
+            # self.m_reclinerFoot.STOP()
+            # self.m_reclinerHead.STOP()  
+            #   
+            self.m_led.ledPWM(100)
             _object.CLIENT()
 
             
@@ -812,32 +791,34 @@ class Qprocess(threading.Thread):
 
             logging.info("------------wake Up Stop-------------")
 
-
-            self.m_EndTime = datetime.datetime.now()
-
-            self.m_reclinerHead.DOWN()
-            self.m_reclinerFoot.DOWN()
-
-
-            work_time = self.m_EndTime - self.m_StartTime
-            getbackTime = int(work_time.total_seconds())            
-
-            logging.info("[WAKEUP] get back work Time : " + str(getbackTime))
-
-
-            for i in range(0, getbackTime * 10):
-                if self.m_isMode:
-                    
-                    # if(i%2 == 0 and  start < constant.wakeUpBrightEnd/2 ): 
-                    #     self.m_led.ledPWM(start)
-                    #     start = start + constant.duty        
-                    time.sleep(0.1)
-                else:
-                    break
-            self.m_led.ledPWM(0)
             self.m_reclinerHead.STOP()         
-            self.m_reclinerFoot.STOP()    
-               
+            self.m_reclinerFoot.STOP()  
+
+            # self.m_EndTime = datetime.datetime.now()
+
+            # self.m_reclinerHead.DOWN()
+            # self.m_reclinerFoot.DOWN()
+
+
+            # work_time = self.m_EndTime - self.m_StartTime
+            # getbackTime = int(work_time.total_seconds())            
+
+            # logging.info("[WAKEUP] get back work Time : " + str(getbackTime))
+
+
+            # for i in range(0, getbackTime * 10):
+            #     if self.m_isMode:
+                    
+            #         # if(i%2 == 0 and  start < constant.wakeUpBrightEnd/2 ): 
+            #         #     self.m_led.ledPWM(start)
+            #         #     start = start + constant.duty        
+            #         time.sleep(0.1)
+            #     else:
+            #         break
+            # self.m_led.ledPWM(0)
+            # self.m_reclinerHead.STOP()         
+            # self.m_reclinerFoot.STOP()    
+            self.m_led.ledPWM(0)
             _object.CLIENT()
 
         self.m_isMode = False                 
