@@ -36,6 +36,9 @@ class Qprocess(threading.Thread):
 
         self.m_isOperation = False
 
+        self.HeadCount = 0
+        self.FootCount = 0
+
         self.headMode = False
         self.footMode = False
         self.m_count = 0
@@ -95,7 +98,6 @@ class Qprocess(threading.Thread):
                     #THREAD가 아닌거 
                     seperate = cmd.split("_")
                     self.zoneEvent(cmd, power, seperate[1])
-                    logging.info("send zone response") #jordan
                     unit.CLIENT()
 
                 elif "reset" in cmd:
@@ -204,12 +206,12 @@ class Qprocess(threading.Thread):
     #zone_1 -> sol_2
     #zone_2 -> sol_3
     #zone_3 -> sol_4
-    #zone_4 -> sol_
+    #zone_4 -> sol_5
     #thread로 동작하도록 구현 (PSI 값을 비교하여 break)
     def zoneEvent(self, _cmd, _power, _index):
         log = True
         self.m_zoneFlag[_index] = True
-        count = 0   #jordan
+
         #SOFT 명령일때
         if _power == "soft":
             volt = self.m_psi.getVoltage()
@@ -225,7 +227,7 @@ class Qprocess(threading.Thread):
                 # 에어 집어 넣어야 할 경우....
                 logging.info("NOW Volt(" + str(volt) + ") < minPSI(" + str(constant.minPSI) + ")")
 
-                while  count < 15: #jordan
+                while  self.m_zoneFlag[_index]:
                     volt = self.m_psi.getVoltage()
 
                     if constant.minPSI <= volt:
@@ -235,14 +237,12 @@ class Qprocess(threading.Thread):
                     else:
                         self.m_pump.pumpON(log)
                         log = False
-                    time.sleep(1) #jordan
-                    count += 1      #jordan
 
             else:    
                 #에어 빼야 할 경우,,,
                 logging.info("NOW Volt(" + str(volt) + ") > minPSI(" + str(constant.minPSI) + ")")
 
-                while count < 15: #jordan
+                while self.m_zoneFlag[_index]:
                     volt = self.m_psi.getVoltage()
 
                     if constant.minPSI >= volt:
@@ -252,12 +252,13 @@ class Qprocess(threading.Thread):
                     else:
                         self.m_sol.ON(1, log)
                         log = False
-                    time.sleep(1)    #jordan
-                    count += 1       #jordan
-
+                        # for i in range(0, constant.pumpDELAY * 10):
+                        #     #플레그 변경되면 break...
+                        #     if self.m_zoneFlag[_index] == False:
+                        #         break
+                        #     time.sleep(0.1)
+                        # log = False
                 time.sleep(constant.zoneSoftDelay)
-                logging.info("PSI(" + str(constant.minPSI) + ") , NOW(" + str(volt) + ")") #jordan
-
 
         elif _power == "hard": 
 
@@ -265,7 +266,7 @@ class Qprocess(threading.Thread):
             self.m_sol.ON(constant.ZONE[_cmd], True)
             time.sleep(constant.MeasureDelay)
 
-            while count < 15:       #jordan
+            while self.m_zoneFlag[_index]:
                 volt = self.m_psi.getVoltage()
 
                 if constant.maxPSI <= volt:
@@ -277,14 +278,13 @@ class Qprocess(threading.Thread):
                 else:
                     self.m_pump.pumpON(log)
                     log = False
-                time.sleep(1)   #jordan
-                count += 1      #jordan
+
 
         self.m_sol.OFF(1, True)
         self.m_sol.OFF(constant.ZONE[_cmd], True)
         self.m_pump.pumpOFF(True)            
         self.m_zoneFlag[_index] = False
-        logging.info(_cmd + " zone END")
+        logging.info(_cmd + " Thread END")
 
 
     def resetEvent(self):
@@ -310,34 +310,48 @@ class Qprocess(threading.Thread):
 
                 if _power == "up":
 
-                    self.m_reclinerHead.UP()
-                    logging.info("head up")
+                    if(self.HeadCount < constant.HeadDelay):
+                        logging.info("BEFORE COUNT : " + str(self.HeadCount))
+                        self.m_reclinerHead.UP()
+                        logging.info("head up")
 
-                    for i in range(0, (constant.HeadDelay) * 10):
-                        if(self.headMode == False):
-                            break
+                        for i in range(0, (constant.HeadDelay - self.HeadCount) * 10):
+                            if(self.headMode == False):
+                                break
+
+                            if (i % 10 == 0):
+                                self.HeadCount += 1
+
+                            if (self.HeadCount == constant.HeadDelay):
+                                logging.info("head stop")
+                                self.m_reclinerHead.STOP() 
+                                break
+                            time.sleep(0.1)
+                    else:
+                        logging.error("i'try head up,,, But HeadCount > max HeadUp...")   
+                        logging.error("max head up count : " + str(constant.HeadDelay) + " head count : " + str(self.HeadCount))
 
                         
-                        time.sleep(0.1)
-                    self.m_reclinerHead.STOP()
-                    logging.info("head stop")
-                            
 
                 elif _power == "down":
 
-                    logging.info("head down")
-                    self.m_reclinerHead.DOWN()
+                    if self.HeadCount > 0:
+                        logging.info("BEFORE COUNT : " + str(self.HeadCount))
+                        logging.info("head down")
+                        self.m_reclinerHead.DOWN()
 
-                    for i in range(0, (constant.HeadDelay-constant.HeadInterval) * 10):
-                        if(self.headMode == False):
-                            break
+                        for i in range(0, (constant.HeadDelay-constant.HeadInterval) * 10):
+                            if(self.headMode == False):
+                                break
 
-                        time.sleep(0.1)
+                            if (i%10 == 0):
+                                self.HeadCount -= 1
+
+                            time.sleep(0.1)
+                        self.m_reclinerHead.STOP()   
                     
-                    self.m_reclinerHead.STOP()   
                     logging.info("head stop")
-
-
+        logging.info("AFTER HEAD COUNT :" + str(self.HeadCount))
 
         self.headMode = False 
         self.m_isOperation = False
@@ -348,7 +362,7 @@ class Qprocess(threading.Thread):
         
         self.m_reclinerFoot.STOP()
         self.footMode= True  
-        # stopEvent = True
+        stopEvent = True
 
         if _cmd == "foot":
 
@@ -356,33 +370,48 @@ class Qprocess(threading.Thread):
 
                 if _power == "up":
 
+                    if(self.FootCount < constant.FootDelay):
+                        logging.info("BEFORE FOOT COUNT :" + str(self.FootCount))
 
-                    logging.info("Foot up" )
+                        logging.info("Foot  up" )
 
-                    self.m_reclinerFoot.UP()
+                        self.m_reclinerFoot.UP()
 
-                    for i in range(0, constant.FootDelay * 10):
-                        if(self.footMode == False):
-                            break
+                        for i in range(0, constant.FootDelay * 10):
+                            if(self.footMode == False):
+                                break
 
-                        time.sleep(0.1)
-                    self.m_reclinerFoot.STOP()
-                    logging.info("Foot  stop" )
+                            if(i%10 == 0):
+                                self.FootCount += 1
 
+                            if(self.FootCount == constant.FootDelay):
+                                logging.info("Foot stop")
+                                self.m_reclinerFoot.STOP() 
+                                break
+                            time.sleep(0.1)
+                    
                 elif _power == "down":
 
-                    self.m_reclinerFoot.DOWN()
-                    logging.info("foot down")
+                    if (self.FootCount > 0):
+                        logging.info("[FOOT] FOOT COUNT : " + str(self.FootCount))
+                        self.m_reclinerFoot.DOWN()
+                        logging.info("foot down")
 
-                    for i in range(0, (constant.FootDelay - constant.FootInterval) * 10):
+                        for i in range(0, (constant.FootDelay - constant.FootInterval) * 10):
 
-                        if(self.footMode == False):
-                            break
-                       
-                        time.sleep(0.1)
-                    logging.info("foot stop")
-                    self.m_reclinerFoot.STOP() 
+                            if(self.footMode == False):
+                                break
+                            if(i%10 == 0):
+                                self.FootCount -= 1
+                            if(self.FootCount == constant.FootInterval):
+                                self.FootCount = 0
+                                self.m_reclinerFoot.STOP() 
+                                break; 
+                            time.sleep(0.1)
+                        logging.info("foot stop")
+                        self.m_reclinerFoot.STOP() 
 
+        logging.info("[FOOT] AFTER FOOT COUNT :" + str(self.FootCount))
             
 
         self.footMode = False 
@@ -396,8 +425,9 @@ class Qprocess(threading.Thread):
         stopEvent = True
 
         self.m_isMode = True
-        if(_power == "start"):
+        if(_power == "start" and self.HeadCount > 0 and self.FootCount > 0):
             logging.info("------------bed Time Start-------------")
+            logging.info("now headCount : " + str(self.HeadCount) + " now footCount : " + str(self.FootCount))
 
             self.m_reclinerFoot.DOWN()
             logging.info("foot down")
@@ -407,12 +437,22 @@ class Qprocess(threading.Thread):
                 if self.m_isMode:
 
                     if(i%2 == 0 and start >= 0): 
+                        # logging.info("BRIGHT : " + str(start))  
                         self.m_led.ledPWM(start)
                         start = start - constant.duty 
-                    time.sleep(0.1)    
+
+                    if(i%10 == 0):
+                        self.FootCount -= 1
+
+                    if(self.FootCount == constant.FootInterval):
+                        self.m_reclinerFoot.STOP()
+                        self.FootCount = 0
+                        break
+
+
+                    time.sleep(0.1)
                 else:
                     break
-                
             logging.info("foot stop")
             self.m_reclinerFoot.STOP()
             
@@ -428,8 +468,19 @@ class Qprocess(threading.Thread):
             for i in range(0, (constant.HeadDelay-constant.HeadInterval) * 10):
                 if self.m_isMode:
                     if(i%2 == 0 and start >= 0): 
+                        # logging.info("BRIGHT : " + str(start))  
                         self.m_led.ledPWM(start)
                         start = start - constant.duty   
+
+                    if(i%10 == 0):
+                        self.HeadCount -= 1   
+
+                    if(self.HeadCount == constant.HeadInterval):
+
+                        logging.info("head down")
+                        self.m_reclinerHead.STOP()
+                        self.HeadCount = 0
+                        break
 
                     time.sleep(0.1)
                 else:
@@ -445,10 +496,12 @@ class Qprocess(threading.Thread):
                 time.sleep(0.1)
 
 
+            logging.info("HEAD COUNT : "+ str(self.HeadCount) + " FOOT COUNT : " + str(self.FootCount))
 
         elif _power == "stop":
             logging.info("------------bed Time Stop-------------")
 
+            logging.info("[STOP] HEAD COUNT : "+ str(self.HeadCount) + " FOOT COUNT : " + str(self.FootCount))
 
             self.m_reclinerFoot.STOP()
             self.m_reclinerHead.STOP()    
@@ -469,9 +522,10 @@ class Qprocess(threading.Thread):
         self.m_reclinerHead.STOP()
         self.m_reclinerFoot.STOP()
         stopEvent = True
-        if(_power == "start" ):
+        if(_power == "start" and self.HeadCount < constant.HeadDelay and self.FootCount <  constant.FootDelay):
 
             logging.info("------------wake Up Start-------------")
+            logging.info("now headCount : " + str(self.HeadCount) + " now footCount : " + str(self.FootCount))
             
             self.m_StartTime = datetime.datetime.now()
             logging.info("head recliner up")
@@ -481,8 +535,19 @@ class Qprocess(threading.Thread):
                 if self.m_isMode:
                     
                     if(i%2 == 0 and  start  <= 100 ): 
+                        # logging.info("BRIGHT : " + str(start)) 
                         self.m_led.ledPWM(start)
                         start = start + constant.duty   
+
+                    if(i%10 == 0):
+                        self.HeadCount += 1
+                    if(self.HeadCount == constant.HeadDelay):
+
+                        if stopEvent == True:
+                            self.m_reclinerHead.STOP()              
+                            stopEvent = False
+                            break
+
                     time.sleep(0.1)
                 else:
                     break
@@ -505,8 +570,18 @@ class Qprocess(threading.Thread):
                 if self.m_isMode:
                     
                     if(i%2 == 0 and  start  <= 100 ): 
+                        # logging.info("BRIGHT : " + str(start)) 
                         self.m_led.ledPWM(start)
                         start = start + constant.duty  
+
+                    if(i%10 ==0):
+                        self.FootCount += 1
+                    if(self.FootCount == constant.FootDelay):
+
+                        if(stopEvent == True):
+                            self.m_reclinerFoot.STOP()
+                            stopEvent = False
+                            break
 
                     time.sleep(0.1)
                 else:
@@ -514,6 +589,7 @@ class Qprocess(threading.Thread):
             logging.info("foot recliner stop")
             self.m_reclinerFoot.STOP()
 
+            logging.info("HEAD COUNT : "+ str(self.HeadCount) + " FOOT COUNT : " + str(self.FootCount))
 
 
             self.m_reclinerHead.STOP()         
@@ -531,6 +607,7 @@ class Qprocess(threading.Thread):
 
             self.m_reclinerHead.STOP()         
             self.m_reclinerFoot.STOP()  
+            logging.info("[STOP] HEAD COUNT : "+ str(self.HeadCount) + " FOOT COUNT : " + str(self.FootCount))
 
 
             

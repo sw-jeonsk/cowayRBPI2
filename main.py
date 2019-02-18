@@ -8,7 +8,6 @@ import logging
 logging.basicConfig(filename='/home/pi/Desktop/github/cowayRBPI2/log/cowayRBPI.log', 
 filemode='a', level=logging.DEBUG, format='[%(asctime)s][%(levelname)s] %(message)s')
 
-logging.info("Server Start..")
 #todo client socket select로 처리하여,, recv데이터 send데이터 각자 놀도록 
 def main():
     ip = "192.168.0.9"

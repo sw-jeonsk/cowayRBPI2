@@ -36,6 +36,9 @@ class Qprocess(threading.Thread):
 
         self.m_isOperation = False
 
+        self.HeadCount = 0
+        self.FootCount = 0
+
         self.headMode = False
         self.footMode = False
         self.m_count = 0
@@ -95,7 +98,6 @@ class Qprocess(threading.Thread):
                     #THREAD가 아닌거 
                     seperate = cmd.split("_")
                     self.zoneEvent(cmd, power, seperate[1])
-                    logging.info("send zone response") #jordan
                     unit.CLIENT()
 
                 elif "reset" in cmd:
@@ -204,12 +206,12 @@ class Qprocess(threading.Thread):
     #zone_1 -> sol_2
     #zone_2 -> sol_3
     #zone_3 -> sol_4
-    #zone_4 -> sol_
+    #zone_4 -> sol_5
     #thread로 동작하도록 구현 (PSI 값을 비교하여 break)
     def zoneEvent(self, _cmd, _power, _index):
         log = True
         self.m_zoneFlag[_index] = True
-        count = 0   #jordan
+
         #SOFT 명령일때
         if _power == "soft":
             volt = self.m_psi.getVoltage()
@@ -225,7 +227,7 @@ class Qprocess(threading.Thread):
                 # 에어 집어 넣어야 할 경우....
                 logging.info("NOW Volt(" + str(volt) + ") < minPSI(" + str(constant.minPSI) + ")")
 
-                while  count < 15: #jordan
+                while  self.m_zoneFlag[_index]:
                     volt = self.m_psi.getVoltage()
 
                     if constant.minPSI <= volt:
@@ -235,14 +237,12 @@ class Qprocess(threading.Thread):
                     else:
                         self.m_pump.pumpON(log)
                         log = False
-                    time.sleep(1) #jordan
-                    count += 1      #jordan
 
             else:    
                 #에어 빼야 할 경우,,,
                 logging.info("NOW Volt(" + str(volt) + ") > minPSI(" + str(constant.minPSI) + ")")
 
-                while count < 15: #jordan
+                while self.m_zoneFlag[_index]:
                     volt = self.m_psi.getVoltage()
 
                     if constant.minPSI >= volt:
@@ -252,12 +252,13 @@ class Qprocess(threading.Thread):
                     else:
                         self.m_sol.ON(1, log)
                         log = False
-                    time.sleep(1)    #jordan
-                    count += 1       #jordan
-
+                        # for i in range(0, constant.pumpDELAY * 10):
+                        #     #플레그 변경되면 break...
+                        #     if self.m_zoneFlag[_index] == False:
+                        #         break
+                        #     time.sleep(0.1)
+                        # log = False
                 time.sleep(constant.zoneSoftDelay)
-                logging.info("PSI(" + str(constant.minPSI) + ") , NOW(" + str(volt) + ")") #jordan
-
 
         elif _power == "hard": 
 
@@ -265,7 +266,7 @@ class Qprocess(threading.Thread):
             self.m_sol.ON(constant.ZONE[_cmd], True)
             time.sleep(constant.MeasureDelay)
 
-            while count < 15:       #jordan
+            while self.m_zoneFlag[_index]:
                 volt = self.m_psi.getVoltage()
 
                 if constant.maxPSI <= volt:
@@ -277,14 +278,13 @@ class Qprocess(threading.Thread):
                 else:
                     self.m_pump.pumpON(log)
                     log = False
-                time.sleep(1)   #jordan
-                count += 1      #jordan
+
 
         self.m_sol.OFF(1, True)
         self.m_sol.OFF(constant.ZONE[_cmd], True)
         self.m_pump.pumpOFF(True)            
         self.m_zoneFlag[_index] = False
-        logging.info(_cmd + " zone END")
+        logging.info(_cmd + " Thread END")
 
 
     def resetEvent(self):
@@ -310,45 +310,57 @@ class Qprocess(threading.Thread):
 
                 if _power == "up":
 
-                    self.m_reclinerHead.UP()
-                    logging.info("head up")
+                    if(self.HeadCount < constant.HeadUp):
+                        logging.info("UP START HEAD COUNT : " + str(self.HeadCount))
+                        self.m_reclinerHead.UP()
 
-                    for i in range(0, (constant.HeadDelay) * 10):
-                        if(self.headMode == False):
-                            break
+                        for i in range(0, constant.HeadUp * 10 + 1):
+                            if(self.headMode == False):
+                                break
+
+                            if (i % 10 == 0):
+                                self.HeadCount += 1
+
+                            if (self.HeadCount >= constant.HeadUp):
+                                self.m_reclinerHead.STOP() 
+                                break
+                            time.sleep(0.1)
 
                         
-                        time.sleep(0.1)
-                    self.m_reclinerHead.STOP()
-                    logging.info("head stop")
-                            
 
                 elif _power == "down":
 
-                    logging.info("head down")
-                    self.m_reclinerHead.DOWN()
+                    if self.HeadCount > 0:
+                        logging.info("DOWN START HEAD COUNT : " + str(self.HeadCount))
 
-                    for i in range(0, (constant.HeadDelay-constant.HeadInterval) * 10):
-                        if(self.headMode == False):
-                            break
+                        self.m_reclinerHead.DOWN()
 
-                        time.sleep(0.1)
+                        for i in range(0, constant.HeadDown * 10 + 1):
+                            if(self.headMode == False):
+                                break
+
+                            if (i%10 == 0):
+                                self.HeadCount -= 1
+
+                            if(self.HeadCount == 0):
+                                self.m_reclinerHead.STOP() 
+                                break        
+                                    
+                            time.sleep(0.1)
+                          
                     
-                    self.m_reclinerHead.STOP()   
-                    logging.info("head stop")
-
-
+        logging.info("HEAD COUNT :" + str(self.HeadCount))
 
         self.headMode = False 
         self.m_isOperation = False
         self.m_reclinerHead.STOP()
-        logging.info("headevent end " + _cmd)
+        logging.info("headevent end---------------------")
  
     def footEvent(self, _cmd, _power):
         
         self.m_reclinerFoot.STOP()
         self.footMode= True  
-        # stopEvent = True
+
 
         if _cmd == "foot":
 
@@ -356,110 +368,134 @@ class Qprocess(threading.Thread):
 
                 if _power == "up":
 
+                    if(self.FootCount < constant.FootUp):
+                        logging.info("FOOT COUNT : " + str(self.FootCount))
 
-                    logging.info("Foot up" )
+                        self.m_reclinerFoot.UP()
 
-                    self.m_reclinerFoot.UP()
+                        for i in range(0, constant.FootUp * 10 + 1):
+                            if(self.footMode == False):
+                                break
 
-                    for i in range(0, constant.FootDelay * 10):
-                        if(self.footMode == False):
-                            break
+                            if(i%10 == 0):
+                                self.FootCount += 1
 
-                        time.sleep(0.1)
-                    self.m_reclinerFoot.STOP()
-                    logging.info("Foot  stop" )
-
+                            if(self.FootCount == constant.FootUp):
+                                self.m_reclinerFoot.STOP() 
+                                break
+                            time.sleep(0.1)
+                    
                 elif _power == "down":
 
-                    self.m_reclinerFoot.DOWN()
-                    logging.info("foot down")
+                    if (self.FootCount > 0):
+                        logging.info("FOOT COUNT : " + str(self.FootCount))
+                        self.m_reclinerFoot.DOWN()
 
-                    for i in range(0, (constant.FootDelay - constant.FootInterval) * 10):
+                        for i in range(0, constant.FootDown * 10 + 1):
 
-                        if(self.footMode == False):
-                            break
-                       
-                        time.sleep(0.1)
-                    logging.info("foot stop")
-                    self.m_reclinerFoot.STOP() 
+                            if(self.footMode == False):
+                                break
+                            if(i%10 == 0):
+                                self.FootCount -= 1
 
-            
+                            if(self.FootCount == 0):
+                                self.m_reclinerFoot.STOP() 
+                                break
+
+                            time.sleep(0.1)
+                    
 
         self.footMode = False 
         self.m_isOperation = False
         self.m_reclinerFoot.STOP()
+        logging.info("footevent end---------------------")
 
     def bedtimeEvent(self, _power, _object):
         
         start = constant.bedTimeBrightStart
         end = constant.bedTimeBrightEnd
-        stopEvent = True
+
 
         self.m_isMode = True
-        if(_power == "start"):
+        if(_power == "start" and self.HeadCount > 0 and self.FootCount > 0):
             logging.info("------------bed Time Start-------------")
+            logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
+            logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
+            logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
 
-            self.m_reclinerFoot.DOWN()
-            logging.info("foot down")
-            stopEvent = True
+           
 
-            for i in range(0, (constant.FootDelay-constant.FootInterval) * 10):
-                if self.m_isMode:
-
-                    if(i%2 == 0 and start >= 0): 
-                        self.m_led.ledPWM(start)
-                        start = start - constant.duty 
-                    time.sleep(0.1)    
-                else:
-                    break
-                
-            logging.info("foot stop")
-            self.m_reclinerFoot.STOP()
-            
-            for i in range(0, constant.WaitTime * 10):
-                if self.m_isMode == False:
-                    break
-                time.sleep(0.1)
-
-            logging.info("head down")
+            self.m_StartTime = datetime.datetime.now()
 
             self.m_reclinerHead.DOWN()
 
-            for i in range(0, (constant.HeadDelay-constant.HeadInterval) * 10):
+            for i in range(0, constant.HeadDown * 10 + 1):
                 if self.m_isMode:
                     if(i%2 == 0 and start >= 0): 
+                        # logging.info("BRIGHT : " + str(start))  
                         self.m_led.ledPWM(start)
                         start = start - constant.duty   
+
+                    if(i%10 == 0):
+                        self.HeadCount -= 1   
+
+                    if(self.HeadCount == 0):
+                        self.m_reclinerHead.STOP()
+                        
+                    time.sleep(0.1)
+                else:
+                    break
+
+            self.m_reclinerHead.STOP() 
+
+            for i in range(0, constant.WaitTime * 10 + 1): 
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
+            self.m_reclinerFoot.DOWN()
+
+
+            for i in range(0, constant.FootDown * 10 + 1):
+                if self.m_isMode:
+
+                    if(i%2 == 0 and start >= 0): 
+                        # logging.info("BRIGHT : " + str(start))  
+                        self.m_led.ledPWM(start)
+                        start = start - constant.duty 
+
+                    if(i%10 == 0):
+                        self.FootCount -= 1
+
+                    if(self.FootCount == 0):
+                        self.m_reclinerFoot.STOP()
 
                     time.sleep(0.1)
                 else:
                     break
 
-            logging.info("head stop")
+            self.m_reclinerHead.STOP()         
+            self.m_reclinerFoot.STOP()
 
-            self.m_reclinerHead.STOP() 
-
-            for i in range(0, constant.WaitTime * 10): 
+            for i in range(0, constant.WaitTime * 10 + 1):
                 if self.m_isMode == False:
                     break
                 time.sleep(0.1)
 
-
+            logging.info("HEAD COUNT : "+ str(self.HeadCount))
+            logging.info("FOOT COUNT : "+ str(self.FootCount))    
 
         elif _power == "stop":
             logging.info("------------bed Time Stop-------------")
 
-
+            
             self.m_reclinerFoot.STOP()
             self.m_reclinerHead.STOP()    
             #   
             self.m_led.ledPWM(100)
             _object.CLIENT()
         
-        self.m_reclinerHead.STOP()         
-        self.m_reclinerFoot.STOP()
         self.m_isMode = False                 
-        logging.info("bedTime : " + _power + " END")
+        logging.info("bedTime : " + _power + " ---------------END----------------")
 
     def wakeupEvent(self, _power, _object):
 
@@ -468,26 +504,247 @@ class Qprocess(threading.Thread):
         self.m_isMode = True
         self.m_reclinerHead.STOP()
         self.m_reclinerFoot.STOP()
-        stopEvent = True
-        if(_power == "start" ):
+
+        if(_power == "start" and self.HeadCount < 3 and self.FootCount < 3):
 
             logging.info("------------wake Up Start-------------")
-            
+            logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
+            logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
+            logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
+
             self.m_StartTime = datetime.datetime.now()
-            logging.info("head recliner up")
+
             self.m_reclinerHead.UP()
 
-            for i in range(0, constant.HeadDelay * 10):
+            for i in range(0, constant.HeadUp * 10 + 1):
                 if self.m_isMode:
                     
                     if(i%2 == 0 and  start  <= 100 ): 
+                        # logging.info("BRIGHT : " + str(start)) 
                         self.m_led.ledPWM(start)
                         start = start + constant.duty   
+
+                    if(i%10 == 0):
+                        self.HeadCount += 1
+                    if(self.HeadCount == constant.HeadUp):
+                        self.m_reclinerHead.STOP()              
                     time.sleep(0.1)
                 else:
                     break
 
-            logging.info("head recliner stop")
+
+            self.m_reclinerHead.STOP()
+
+            for i in range(0, constant.WaitTime * 10 + 1):
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
+
+            self.m_reclinerFoot.UP()
+
+
+            for i in range(0, constant.FootUp * 10 + 1):
+                if self.m_isMode:
+                    
+                    if(i%2 == 0 and  start  <= 100 ): 
+                        # logging.info("BRIGHT : " + str(start)) 
+                        self.m_led.ledPWM(start)
+                        start = start + constant.duty  
+
+                    if(i%10 ==0):
+                        self.FootCount += 1
+
+                    time.sleep(0.1)
+                else:
+                    break
+
+            logging.info("HEAD COUNT : "+ str(self.HeadCount))
+            logging.info("FOOT COUNT : "+ str(self.FootCount))
+
+            self.m_reclinerHead.STOP()         
+            self.m_reclinerFoot.STOP()
+
+            for i in range(0, constant.WaitTime * 10 + 1):
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
+
+
+        elif _power == "stop":
+
+            logging.info("------------wake Up Stop-------------")
+
+            self.m_reclinerHead.STOP()         
+            self.m_reclinerFoot.STOP()  
+
+            
+            self.m_led.ledPWM(0)
+            _object.CLIENT()
+
+        self.m_isMode = False                 
+        logging.info("WAKEUP : "+ _power + " ---------------END----------------") 
+    
+
+    #리클라이너 하나씩 동작시킴
+    def headEvent2(self, _cmd, _power):
+        
+        self.m_reclinerHead.STOP()
+
+        if _cmd == "head":
+
+            if _power != "stop":
+
+                if _power == "up":
+                    self.m_reclinerHead.UP()
+
+                    for i in range(0, constant.HeadUp * 10):
+                        if(self.headMode == False):
+                            break
+                        time.sleep(0.1)
+
+                elif _power == "down":
+                    self.m_reclinerHead.DOWN()
+
+                    for i in range(0, constant.HeadDown * 10):
+                        if(self.headMode == False):
+                            break
+                        time.sleep(0.1)
+
+
+        self.headMode = False 
+        self.m_isOperation = False
+        self.m_reclinerHead.STOP()
+        logging.info("headevent end---------------------")
+ 
+    def footEvent2(self, _cmd, _power):
+        
+        self.m_reclinerFoot.STOP()
+        self.footMode= True  
+
+        if _cmd == "foot":
+
+            if _power != "stop":
+
+                if _power == "up":
+                    self.m_reclinerFoot.UP()
+
+                    for i in range(0, constant.FootUp * 10):
+                        if(self.footMode == False):
+                            break
+                        time.sleep(0.1)
+
+                elif _power == "down":
+                    self.m_reclinerFoot.DOWN()
+
+                    for i in range(0, constant.FootDown * 10):
+                        if(self.footMode == False):
+                            break
+                        time.sleep(0.1)
+
+        self.footMode = False 
+        self.m_isOperation = False
+        self.m_reclinerFoot.STOP()
+        logging.info("footevent end---------------------")
+
+    def bedtimeEvent2(self, _power, _object):
+        
+        start = constant.bedTimeBrightStart
+        end = constant.bedTimeBrightEnd
+        self.m_isMode = True
+        if(_power == "start"):
+            logging.info("------------bed Time Start-------------")
+            logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
+            logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
+            logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
+
+           
+
+            self.m_StartTime = datetime.datetime.now()
+
+            self.m_reclinerHead.DOWN()
+
+            for i in range(0, constant.HeadDown * 10):
+                if self.m_isMode:
+                    if(i%2 == 0 and start >= 0): 
+                        logging.info("BRIGHT : " + str(start))  
+                        self.m_led.ledPWM(start)
+                        start = start - constant.duty     
+                    time.sleep(0.1)
+                else:
+                    break
+
+            self.m_reclinerHead.STOP() 
+            for i in range(0, constant.WaitTime * 10):
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
+            self.m_reclinerFoot.DOWN()
+
+
+            for i in range(0, constant.FootDown * 10):
+                if self.m_isMode:
+                    if(i%2 == 0 and start >= 0): 
+                        logging.info("BRIGHT : " + str(start))  
+                        self.m_led.ledPWM(start)
+                        start = start - constant.duty     
+                    time.sleep(0.1)
+                else:
+                    break
+
+            self.m_reclinerHead.STOP()         
+            self.m_reclinerFoot.STOP()
+
+            for i in range(0, constant.WaitTime * 10):
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
+            
+        elif _power == "stop":
+            logging.info("------------bed Time Stop-------------")
+
+            
+            self.m_reclinerFoot.STOP()
+            self.m_reclinerHead.STOP()    
+
+            #   
+            self.m_led.ledPWM(100)
+            _object.CLIENT()
+
+            
+        self.m_isMode = False                 
+        logging.info("bedTime : " + _power + " ---------------END----------------")
+
+
+    def wakeupEvent2(self, _power, _object):
+
+        start = constant.wakeUpBrightStart
+        end = constant.wakeUpBrightEnd
+        self.m_isMode = True
+        self.m_reclinerHead.STOP()
+        self.m_reclinerFoot.STOP()
+
+        if(_power == "start"):
+
+            logging.info("------------wake Up Start-------------")
+            logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
+            logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
+            logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
+
+            self.m_StartTime = datetime.datetime.now()
+
+            self.m_reclinerHead.UP()
+
+            for i in range(0, constant.HeadUp * 10):
+                if self.m_isMode:
+                    
+                    if(i%2 == 0 and  start  <= 100 ): 
+                        logging.info("BRIGHT : " + str(start)) 
+                        self.m_led.ledPWM(start)
+                        start = start + constant.duty        
+                    time.sleep(0.1)
+                else:
+                    break
+
 
             self.m_reclinerHead.STOP()
 
@@ -496,24 +753,19 @@ class Qprocess(threading.Thread):
                     break
                 time.sleep(0.1)
 
-
-            logging.info("foot recliner up")
             self.m_reclinerFoot.UP()
 
 
-            for i in range(0, constant.FootDelay * 10):
+            for i in range(0, constant.FootUp * 10):
                 if self.m_isMode:
                     
                     if(i%2 == 0 and  start  <= 100 ): 
+                        logging.info("BRIGHT : " + str(start)) 
                         self.m_led.ledPWM(start)
-                        start = start + constant.duty  
-
+                        start = start + constant.duty        
                     time.sleep(0.1)
                 else:
                     break
-            logging.info("foot recliner stop")
-            self.m_reclinerFoot.STOP()
-
 
 
             self.m_reclinerHead.STOP()         
@@ -532,394 +784,186 @@ class Qprocess(threading.Thread):
             self.m_reclinerHead.STOP()         
             self.m_reclinerFoot.STOP()  
 
-
-            
             self.m_led.ledPWM(0)
             _object.CLIENT()
 
         self.m_isMode = False                 
         logging.info("WAKEUP : "+ _power + " ---------------END----------------") 
-    
-
-    #리클라이너 하나씩 동작시킴
-    # def headEvent2(self, _cmd, _power):
-        
-    #     self.m_reclinerHead.STOP()
-
-    #     if _cmd == "head":
-
-    #         if _power != "stop":
-
-    #             if _power == "up":
-    #                 self.m_reclinerHead.UP()
-
-    #                 for i in range(0, constant.HeadUp * 10):
-    #                     if(self.headMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-    #             elif _power == "down":
-    #                 self.m_reclinerHead.DOWN()
-
-    #                 for i in range(0, constant.HeadDown * 10):
-    #                     if(self.headMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-
-    #     self.headMode = False 
-    #     self.m_isOperation = False
-    #     self.m_reclinerHead.STOP()
-    #     logging.info("headevent end---------------------")
- 
-    # def footEvent2(self, _cmd, _power):
-        
-    #     self.m_reclinerFoot.STOP()
-    #     self.footMode= True  
-
-    #     if _cmd == "foot":
-
-    #         if _power != "stop":
-
-    #             if _power == "up":
-    #                 self.m_reclinerFoot.UP()
-
-    #                 for i in range(0, constant.FootUp * 10):
-    #                     if(self.footMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-    #             elif _power == "down":
-    #                 self.m_reclinerFoot.DOWN()
-
-    #                 for i in range(0, constant.FootDown * 10):
-    #                     if(self.footMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-    #     self.footMode = False 
-    #     self.m_isOperation = False
-    #     self.m_reclinerFoot.STOP()
-    #     logging.info("footevent end---------------------")
-
-    # def bedtimeEvent2(self, _power, _object):
-        
-    #     start = constant.bedTimeBrightStart
-    #     end = constant.bedTimeBrightEnd
-    #     self.m_isMode = True
-    #     if(_power == "start"):
-    #         logging.info("------------bed Time Start-------------")
-    #         logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
-    #         logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
-    #         logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
-
-           
-
-    #         self.m_StartTime = datetime.datetime.now()
-
-    #         self.m_reclinerHead.DOWN()
-
-    #         for i in range(0, constant.HeadDown * 10):
-    #             if self.m_isMode:
-    #                 if(i%2 == 0 and start >= 0): 
-    #                     logging.info("BRIGHT : " + str(start))  
-    #                     self.m_led.ledPWM(start)
-    #                     start = start - constant.duty     
-    #                 time.sleep(0.1)
-    #             else:
-    #                 break
-
-    #         self.m_reclinerHead.STOP() 
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
-    #         self.m_reclinerFoot.DOWN()
-
-
-    #         for i in range(0, constant.FootDown * 10):
-    #             if self.m_isMode:
-    #                 if(i%2 == 0 and start >= 0): 
-    #                     logging.info("BRIGHT : " + str(start))  
-    #                     self.m_led.ledPWM(start)
-    #                     start = start - constant.duty     
-    #                 time.sleep(0.1)
-    #             else:
-    #                 break
-
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()
-
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
-            
-    #     elif _power == "stop":
-    #         logging.info("------------bed Time Stop-------------")
-
-            
-    #         self.m_reclinerFoot.STOP()
-    #         self.m_reclinerHead.STOP()    
-
-    #         #   
-    #         self.m_led.ledPWM(100)
-    #         _object.CLIENT()
-
-            
-    #     self.m_isMode = False                 
-    #     logging.info("bedTime : " + _power + " ---------------END----------------")
-
-
-    # def wakeupEvent2(self, _power, _object):
-
-    #     start = constant.wakeUpBrightStart
-    #     end = constant.wakeUpBrightEnd
-    #     self.m_isMode = True
-    #     self.m_reclinerHead.STOP()
-    #     self.m_reclinerFoot.STOP()
-
-    #     if(_power == "start"):
-
-    #         logging.info("------------wake Up Start-------------")
-    #         logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
-    #         logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
-    #         logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
-
-    #         self.m_StartTime = datetime.datetime.now()
-
-    #         self.m_reclinerHead.UP()
-
-    #         for i in range(0, constant.HeadUp * 10):
-    #             if self.m_isMode:
-                    
-    #                 if(i%2 == 0 and  start  <= 100 ): 
-    #                     logging.info("BRIGHT : " + str(start)) 
-    #                     self.m_led.ledPWM(start)
-    #                     start = start + constant.duty        
-    #                 time.sleep(0.1)
-    #             else:
-    #                 break
-
-
-    #         self.m_reclinerHead.STOP()
-
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
-
-    #         self.m_reclinerFoot.UP()
-
-
-    #         for i in range(0, constant.FootUp * 10):
-    #             if self.m_isMode:
-                    
-    #                 if(i%2 == 0 and  start  <= 100 ): 
-    #                     logging.info("BRIGHT : " + str(start)) 
-    #                     self.m_led.ledPWM(start)
-    #                     start = start + constant.duty        
-    #                 time.sleep(0.1)
-    #             else:
-    #                 break
-
-
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()
-
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
-
-
-    #     elif _power == "stop":
-
-    #         logging.info("------------wake Up Stop-------------")
-
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()  
-
-    #         self.m_led.ledPWM(0)
-    #         _object.CLIENT()
-
-    #     self.m_isMode = False                 
-    #     logging.info("WAKEUP : "+ _power + " ---------------END----------------") 
 
    
-    # def headEvent3(self, _cmd, _power):
+    def headEvent3(self, _cmd, _power):
         
-    #     self.m_reclinerHead.STOP()
+        self.m_reclinerHead.STOP()
 
-    #     if _cmd == "head":
+        if _cmd == "head":
 
-    #         if _power != "stop":
+            if _power != "stop":
 
-    #             if _power == "up":
-    #                 self.m_reclinerHead.UP()
+                if _power == "up":
+                    self.m_reclinerHead.UP()
 
-    #                 for i in range(0, constant.HeadUp * 10):
-    #                     if(self.headMode == False):
-    #                         break
-    #                     time.sleep(0.1)
+                    for i in range(0, constant.HeadUp * 10):
+                        if(self.headMode == False):
+                            break
+                        time.sleep(0.1)
 
-    #             elif _power == "down":
-    #                 self.m_reclinerHead.DOWN()
+                elif _power == "down":
+                    self.m_reclinerHead.DOWN()
 
-    #                 for i in range(0, constant.HeadDown * 10):
-    #                     if(self.headMode == False):
-    #                         break
-    #                     time.sleep(0.1)
+                    for i in range(0, constant.HeadDown * 10):
+                        if(self.headMode == False):
+                            break
+                        time.sleep(0.1)
 
 
-    #     self.headMode = False 
-    #     self.m_isOperation = False
-    #     self.m_reclinerHead.STOP()
-    #     logging.info("headevent end---------------------")
+        self.headMode = False 
+        self.m_isOperation = False
+        self.m_reclinerHead.STOP()
+        logging.info("headevent end---------------------")
  
-    # def footEvent3(self, _cmd, _power):
+    def footEvent3(self, _cmd, _power):
         
-    #     self.m_reclinerFoot.STOP()
-    #     self.footMode= True  
+        self.m_reclinerFoot.STOP()
+        self.footMode= True  
 
 
-    #     if _cmd == "foot":
+        if _cmd == "foot":
 
-    #         if _power != "stop":
+            if _power != "stop":
 
-    #             if _power == "up":
-    #                 self.m_reclinerFoot.UP()
+                if _power == "up":
+                    self.m_reclinerFoot.UP()
 
-    #                 for i in range(0, constant.FootUp * 10):
-    #                     if(self.footMode == False):
-    #                         break
-    #                     time.sleep(0.1)
+                    for i in range(0, constant.FootUp * 10):
+                        if(self.footMode == False):
+                            break
+                        time.sleep(0.1)
 
-    #             elif _power == "down":
-    #                 self.m_reclinerFoot.DOWN()
+                elif _power == "down":
+                    self.m_reclinerFoot.DOWN()
 
-    #                 for i in range(0, constant.FootDown * 10):
-    #                     if(self.footMode == False):
-    #                         break
-    #                     time.sleep(0.1)
+                    for i in range(0, constant.FootDown * 10):
+                        if(self.footMode == False):
+                            break
+                        time.sleep(0.1)
 
-    #     self.footMode = False 
-    #     self.m_isOperation = False
-    #     self.m_reclinerFoot.STOP()
-    #     logging.info("footevent end---------------------")
+        self.footMode = False 
+        self.m_isOperation = False
+        self.m_reclinerFoot.STOP()
+        logging.info("footevent end---------------------")
 
 
     #리클라이너 두개 동시 동작
-    # def bedtimeEvent3(self, _power, _object):
+    def bedtimeEvent3(self, _power, _object):
         
-    #     start = constant.bedTimeBrightStart
-    #     end = constant.bedTimeBrightEnd
-    #     self.m_isMode = True
-    #     if(_power == "start"):
-    #         logging.info("------------bed Time Start-------------")
-    #         logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
-    #         logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
-    #         logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
+        start = constant.bedTimeBrightStart
+        end = constant.bedTimeBrightEnd
+        self.m_isMode = True
+        if(_power == "start"):
+            logging.info("------------bed Time Start-------------")
+            logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
+            logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
+            logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
 
            
 
-    #         self.m_StartTime = datetime.datetime.now()
+            self.m_StartTime = datetime.datetime.now()
 
-    #         self.m_reclinerHead.DOWN()
-    #         self.m_reclinerFoot.DOWN()
+            self.m_reclinerHead.DOWN()
+            self.m_reclinerFoot.DOWN()
 
-    #         for i in range(0, constant.HeadDown * 10):
-    #             if self.m_isMode:
-    #                 if(i%2 == 0 and start >= 0): 
-    #                     logging.info("BRIGHT : " + str(start))  
-    #                     self.m_led.ledPWM(start)
-    #                     start = start - constant.duty     
+            for i in range(0, constant.HeadDown * 10):
+                if self.m_isMode:
+                    if(i%2 == 0 and start >= 0): 
+                        logging.info("BRIGHT : " + str(start))  
+                        self.m_led.ledPWM(start)
+                        start = start - constant.duty     
                     
-    #                 if(i == constant.FootDown * 10):
-    #                     self.m_reclinerFoot.STOP()
-    #                 time.sleep(0.1)
-    #             else:
-    #                 break
+                    if(i == constant.FootDown * 10):
+                        self.m_reclinerFoot.STOP()
+                    time.sleep(0.1)
+                else:
+                    break
 
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()
+            self.m_reclinerHead.STOP()         
+            self.m_reclinerFoot.STOP()
 
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
+            for i in range(0, constant.WaitTime * 10):
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
             
-    #     elif _power == "stop":
-    #         logging.info("------------bed Time Stop-------------")
-
-            
-    #         self.m_reclinerFoot.STOP()
-    #         self.m_reclinerHead.STOP()    
-
-    #         #   
-    #         self.m_led.ledPWM(100)
-    #         _object.CLIENT()
+        elif _power == "stop":
+            logging.info("------------bed Time Stop-------------")
 
             
-    #     self.m_isMode = False                 
-    #     logging.info("bedTime : " + _power + " ---------------END----------------")
+            self.m_reclinerFoot.STOP()
+            self.m_reclinerHead.STOP()    
+
+            #   
+            self.m_led.ledPWM(100)
+            _object.CLIENT()
+
+            
+        self.m_isMode = False                 
+        logging.info("bedTime : " + _power + " ---------------END----------------")
 
 
-    # def wakeupEvent3(self, _power, _object):
+    def wakeupEvent3(self, _power, _object):
 
-    #     start = constant.wakeUpBrightStart
-    #     end = constant.wakeUpBrightEnd
-    #     self.m_isMode = True
-    #     self.m_reclinerHead.STOP()
-    #     self.m_reclinerFoot.STOP()
+        start = constant.wakeUpBrightStart
+        end = constant.wakeUpBrightEnd
+        self.m_isMode = True
+        self.m_reclinerHead.STOP()
+        self.m_reclinerFoot.STOP()
 
-    #     if(_power == "start"):
+        if(_power == "start"):
 
-    #         logging.info("------------wake Up Start-------------")
-    #         logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
-    #         logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
-    #         logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
+            logging.info("------------wake Up Start-------------")
+            logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
+            logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
+            logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
 
-    #         self.m_StartTime = datetime.datetime.now()
+            self.m_StartTime = datetime.datetime.now()
 
-    #         self.m_reclinerHead.UP()
-    #         self.m_reclinerFoot.UP()
+            self.m_reclinerHead.UP()
+            self.m_reclinerFoot.UP()
 
-    #         for i in range(0, constant.HeadUp * 10):
-    #             if self.m_isMode:
+            for i in range(0, constant.HeadUp * 10):
+                if self.m_isMode:
                     
-    #                 if(i%2 == 0 and  start  <= 100 ): 
-    #                     logging.info("BRIGHT : " + str(start)) 
-    #                     self.m_led.ledPWM(start)
-    #                     start = start + constant.duty        
-    #                 time.sleep(0.1)
+                    if(i%2 == 0 and  start  <= 100 ): 
+                        logging.info("BRIGHT : " + str(start)) 
+                        self.m_led.ledPWM(start)
+                        start = start + constant.duty        
+                    time.sleep(0.1)
 
-    #                 if( i == constant.FootUp * 10):
-    #                     self.m_reclinerFoot.STOP()
-    #             else:
-    #                 break
+                    if( i == constant.FootUp * 10):
+                        self.m_reclinerFoot.STOP()
+                else:
+                    break
 
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()
+            self.m_reclinerHead.STOP()         
+            self.m_reclinerFoot.STOP()
 
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
+            for i in range(0, constant.WaitTime * 10):
+                if self.m_isMode == False:
+                    break
+                time.sleep(0.1)
 
 
-    #     elif _power == "stop":
+        elif _power == "stop":
 
-    #         logging.info("------------wake Up Stop-------------")
+            logging.info("------------wake Up Stop-------------")
 
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()  
+            self.m_reclinerHead.STOP()         
+            self.m_reclinerFoot.STOP()  
 
-    #         self.m_led.ledPWM(0)
-    #         _object.CLIENT()
+            self.m_led.ledPWM(0)
+            _object.CLIENT()
 
-    #     self.m_isMode = False                 
-    #     logging.info("WAKEUP : "+ _power + " ---------------END----------------") 
+        self.m_isMode = False                 
+        logging.info("WAKEUP : "+ _power + " ---------------END----------------") 
 
 
     def alignEvent(self, _power, _object):

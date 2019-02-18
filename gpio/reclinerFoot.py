@@ -16,16 +16,13 @@ class reclinerFoot():
         GPIO.output(self.reclinerDOWN, False)
 
     def UP(self):
-        logging.info("FOOT UP")
         GPIO.output(self.reclinerUP, True)
 
     def STOP(self):
-        logging.info("FOOT STOP")
         GPIO.output(self.reclinerUP, False)
         GPIO.output(self.reclinerDOWN, False)
 
     def DOWN(self):
-        logging.info("FOOT DOWN")
         GPIO.output(self.reclinerDOWN, True)
 
     def footClose(self):

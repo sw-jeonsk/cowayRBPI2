@@ -15,16 +15,13 @@ class reclinerHead():
         GPIO.output(self.reclinerDOWN, False)
 
     def UP(self):
-        logging.info("HEAD UP")
         GPIO.output(self.reclinerUP, True)
 
     def STOP(self):
-        logging.info("HEAD STOP")
         GPIO.output(self.reclinerUP, False)
         GPIO.output(self.reclinerDOWN, False)
 
     def DOWN(self):
-        logging.info("HEAD DOWN")
         GPIO.output(self.reclinerDOWN, True)
 
     def headClose(self):

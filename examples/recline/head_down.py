@@ -22,11 +22,8 @@ def main():
     
 
     try:
-        mainHEAD.UP()
-        #mainHEAD.DOWN()
+        mainHEAD.DOWN()
 
-        #mainFOOT.UP()
-        #mainFOOT.DOWN()
 
         while True:
             count += 1

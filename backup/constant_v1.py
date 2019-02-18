@@ -49,13 +49,11 @@ wakeUpBrightStart = 0
 wakeUpBrightEnd = 100
 
 #recliner
-HeadDelay = 15 #second
-HeadInterval = 1 
-FootDelay = 9
-FootInterval = 1
-
+HeadUp = 20 #second
+HeadDown = 19 #second
 WaitTime = 2
-
+FootUp = 9
+FootDown = 8
 
 #recliner
 
@@ -64,7 +62,7 @@ ledBright = 80
 
 ZONE = {"zone_1": 2, "zone_2": 3, "zone_3": 4, "zone_4": 5}
 minPSI = 0.8
-maxPSI = 3.2
+maxPSI = 2.2
 
 #media
 IDLE = "/home/pi/Desktop/github/media/idle.mov"
