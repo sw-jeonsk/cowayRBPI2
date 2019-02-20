@@ -44,6 +44,8 @@ zoneHardDelay = 5 #second
 MeasureDelay = 1 #second
 resetDelay    = 10 #second
 
+
+ValueInterval = 0.1
 #wakeup
 wakeUpBrightStart = 0
 wakeUpBrightEnd = 100

@@ -90,13 +90,17 @@ class Qprocess(threading.Thread):
 
                 if "zone_" in cmd:
 
-
-
                     #THREAD가 아닌거 
                     seperate = cmd.split("_")
                     self.zoneEvent(cmd, power, seperate[1])
                     logging.info("send zone response") #jordan
                     unit.CLIENT()
+
+                elif "air" in cmd:
+
+                    self.alignEvent(power, unit)
+                    unit.CLIENT()
+                    
 
                 elif "reset" in cmd:
                     self.resetEvent()
@@ -207,85 +211,46 @@ class Qprocess(threading.Thread):
     #zone_4 -> sol_
     #thread로 동작하도록 구현 (PSI 값을 비교하여 break)
     def zoneEvent(self, _cmd, _power, _index):
+
         log = True
         self.m_zoneFlag[_index] = True
         count = 0   #jordan
-        #SOFT 명령일때
-        if _power == "soft":
-            volt = self.m_psi.getVoltage()
+        
+        self.m_sol.ON(constant.ZONE[_cmd], True)
 
-            logging.info("open before volt : " + str(volt))
-            self.m_sol.ON(constant.ZONE[_cmd], True)
-            time.sleep(constant.MeasureDelay)
+        time.sleep(constant.MeasureDelay)
 
-            volt = self.m_psi.getVoltage()
-            logging.info("open after volt : " + str(volt))
+        volt = self.m_psi.getVoltage()
 
-            if volt < constant.minPSI:
-                # 에어 집어 넣어야 할 경우....
-                logging.info("NOW Volt(" + str(volt) + ") < minPSI(" + str(constant.minPSI) + ")")
+        if abs(_power - volt) >= constant.ValueInterval:
+            if _power > volt:
 
-                while  count < 15: #jordan
+                self.m_sol.ON(1, log)
+                while count < 150:
+
                     volt = self.m_psi.getVoltage()
 
-                    if constant.minPSI <= volt:
-                        logging.info("minPSI(" + str(constant.minPSI) + ") < NOW(" + str(volt) + ")")
-                        break;
+                    if volt >= _power:
+                        break
+                    count += 1
+                    time.sleep(0.1) 
+            else:
+                self.m_pump.pumpON(log)
+                while count < 150:
 
-                    else:
-                        self.m_pump.pumpON(log)
-                        log = False
-                    time.sleep(1) #jordan
-                    count += 1      #jordan
-
-            else:    
-                #에어 빼야 할 경우,,,
-                logging.info("NOW Volt(" + str(volt) + ") > minPSI(" + str(constant.minPSI) + ")")
-
-                while count < 15: #jordan
                     volt = self.m_psi.getVoltage()
 
-                    if constant.minPSI >= volt:
-                        logging.info("minPSI(" + str(constant.minPSI) + ") > NOW(" + str(volt) + ")")
-                        break;
-
-                    else:
-                        self.m_sol.ON(1, log)
-                        log = False
-                    time.sleep(1)    #jordan
-                    count += 1       #jordan
-
-                time.sleep(constant.zoneSoftDelay)
-                logging.info("PSI(" + str(constant.minPSI) + ") , NOW(" + str(volt) + ")") #jordan
-
-
-        elif _power == "hard": 
-
-            self.m_pump.pumpON(True)
-            self.m_sol.ON(constant.ZONE[_cmd], True)
-            time.sleep(constant.MeasureDelay)
-
-            while count < 15:       #jordan
-                volt = self.m_psi.getVoltage()
-
-                if constant.maxPSI <= volt:
-
-                    logging.info("HARD " + str(volt))
-                    self.m_sol.OFF(constant.ZONE[_cmd], True)
-                    break;
-
-                else:
-                    self.m_pump.pumpON(log)
-                    log = False
-                time.sleep(1)   #jordan
-                count += 1      #jordan
+                    if volt <= _power:
+                        break
+                        
+                    count += 1
+                    time.sleep(0.1)    
 
         self.m_sol.OFF(1, True)
         self.m_sol.OFF(constant.ZONE[_cmd], True)
         self.m_pump.pumpOFF(True)            
         self.m_zoneFlag[_index] = False
         logging.info(_cmd + " zone END")
-
 
     def resetEvent(self):
         self.m_sol.multiON([1,2,3,4,5])
@@ -541,554 +506,47 @@ class Qprocess(threading.Thread):
         logging.info("WAKEUP : "+ _power + " ---------------END----------------") 
     
 
-    #리클라이너 하나씩 동작시킴
-    # def headEvent2(self, _cmd, _power):
-        
-    #     self.m_reclinerHead.STOP()
-
-    #     if _cmd == "head":
-
-    #         if _power != "stop":
-
-    #             if _power == "up":
-    #                 self.m_reclinerHead.UP()
-
-    #                 for i in range(0, constant.HeadUp * 10):
-    #                     if(self.headMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-    #             elif _power == "down":
-    #                 self.m_reclinerHead.DOWN()
-
-    #                 for i in range(0, constant.HeadDown * 10):
-    #                     if(self.headMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-
-    #     self.headMode = False 
-    #     self.m_isOperation = False
-    #     self.m_reclinerHead.STOP()
-    #     logging.info("headevent end---------------------")
- 
-    # def footEvent2(self, _cmd, _power):
-        
-    #     self.m_reclinerFoot.STOP()
-    #     self.footMode= True  
-
-    #     if _cmd == "foot":
-
-    #         if _power != "stop":
-
-    #             if _power == "up":
-    #                 self.m_reclinerFoot.UP()
-
-    #                 for i in range(0, constant.FootUp * 10):
-    #                     if(self.footMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-    #             elif _power == "down":
-    #                 self.m_reclinerFoot.DOWN()
-
-    #                 for i in range(0, constant.FootDown * 10):
-    #                     if(self.footMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-    #     self.footMode = False 
-    #     self.m_isOperation = False
-    #     self.m_reclinerFoot.STOP()
-    #     logging.info("footevent end---------------------")
-
-    # def bedtimeEvent2(self, _power, _object):
-        
-    #     start = constant.bedTimeBrightStart
-    #     end = constant.bedTimeBrightEnd
-    #     self.m_isMode = True
-    #     if(_power == "start"):
-    #         logging.info("------------bed Time Start-------------")
-    #         logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
-    #         logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
-    #         logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
-
-           
-
-    #         self.m_StartTime = datetime.datetime.now()
-
-    #         self.m_reclinerHead.DOWN()
-
-    #         for i in range(0, constant.HeadDown * 10):
-    #             if self.m_isMode:
-    #                 if(i%2 == 0 and start >= 0): 
-    #                     logging.info("BRIGHT : " + str(start))  
-    #                     self.m_led.ledPWM(start)
-    #                     start = start - constant.duty     
-    #                 time.sleep(0.1)
-    #             else:
-    #                 break
-
-    #         self.m_reclinerHead.STOP() 
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
-    #         self.m_reclinerFoot.DOWN()
-
-
-    #         for i in range(0, constant.FootDown * 10):
-    #             if self.m_isMode:
-    #                 if(i%2 == 0 and start >= 0): 
-    #                     logging.info("BRIGHT : " + str(start))  
-    #                     self.m_led.ledPWM(start)
-    #                     start = start - constant.duty     
-    #                 time.sleep(0.1)
-    #             else:
-    #                 break
-
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()
-
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
-            
-    #     elif _power == "stop":
-    #         logging.info("------------bed Time Stop-------------")
-
-            
-    #         self.m_reclinerFoot.STOP()
-    #         self.m_reclinerHead.STOP()    
-
-    #         #   
-    #         self.m_led.ledPWM(100)
-    #         _object.CLIENT()
-
-            
-    #     self.m_isMode = False                 
-    #     logging.info("bedTime : " + _power + " ---------------END----------------")
-
-
-    # def wakeupEvent2(self, _power, _object):
-
-    #     start = constant.wakeUpBrightStart
-    #     end = constant.wakeUpBrightEnd
-    #     self.m_isMode = True
-    #     self.m_reclinerHead.STOP()
-    #     self.m_reclinerFoot.STOP()
-
-    #     if(_power == "start"):
-
-    #         logging.info("------------wake Up Start-------------")
-    #         logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
-    #         logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
-    #         logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
-
-    #         self.m_StartTime = datetime.datetime.now()
-
-    #         self.m_reclinerHead.UP()
-
-    #         for i in range(0, constant.HeadUp * 10):
-    #             if self.m_isMode:
-                    
-    #                 if(i%2 == 0 and  start  <= 100 ): 
-    #                     logging.info("BRIGHT : " + str(start)) 
-    #                     self.m_led.ledPWM(start)
-    #                     start = start + constant.duty        
-    #                 time.sleep(0.1)
-    #             else:
-    #                 break
-
-
-    #         self.m_reclinerHead.STOP()
-
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
-
-    #         self.m_reclinerFoot.UP()
-
-
-    #         for i in range(0, constant.FootUp * 10):
-    #             if self.m_isMode:
-                    
-    #                 if(i%2 == 0 and  start  <= 100 ): 
-    #                     logging.info("BRIGHT : " + str(start)) 
-    #                     self.m_led.ledPWM(start)
-    #                     start = start + constant.duty        
-    #                 time.sleep(0.1)
-    #             else:
-    #                 break
-
-
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()
-
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
-
-
-    #     elif _power == "stop":
-
-    #         logging.info("------------wake Up Stop-------------")
-
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()  
-
-    #         self.m_led.ledPWM(0)
-    #         _object.CLIENT()
-
-    #     self.m_isMode = False                 
-    #     logging.info("WAKEUP : "+ _power + " ---------------END----------------") 
-
-   
-    # def headEvent3(self, _cmd, _power):
-        
-    #     self.m_reclinerHead.STOP()
-
-    #     if _cmd == "head":
-
-    #         if _power != "stop":
-
-    #             if _power == "up":
-    #                 self.m_reclinerHead.UP()
-
-    #                 for i in range(0, constant.HeadUp * 10):
-    #                     if(self.headMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-    #             elif _power == "down":
-    #                 self.m_reclinerHead.DOWN()
-
-    #                 for i in range(0, constant.HeadDown * 10):
-    #                     if(self.headMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-
-    #     self.headMode = False 
-    #     self.m_isOperation = False
-    #     self.m_reclinerHead.STOP()
-    #     logging.info("headevent end---------------------")
- 
-    # def footEvent3(self, _cmd, _power):
-        
-    #     self.m_reclinerFoot.STOP()
-    #     self.footMode= True  
-
-
-    #     if _cmd == "foot":
-
-    #         if _power != "stop":
-
-    #             if _power == "up":
-    #                 self.m_reclinerFoot.UP()
-
-    #                 for i in range(0, constant.FootUp * 10):
-    #                     if(self.footMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-    #             elif _power == "down":
-    #                 self.m_reclinerFoot.DOWN()
-
-    #                 for i in range(0, constant.FootDown * 10):
-    #                     if(self.footMode == False):
-    #                         break
-    #                     time.sleep(0.1)
-
-    #     self.footMode = False 
-    #     self.m_isOperation = False
-    #     self.m_reclinerFoot.STOP()
-    #     logging.info("footevent end---------------------")
-
-
-    #리클라이너 두개 동시 동작
-    # def bedtimeEvent3(self, _power, _object):
-        
-    #     start = constant.bedTimeBrightStart
-    #     end = constant.bedTimeBrightEnd
-    #     self.m_isMode = True
-    #     if(_power == "start"):
-    #         logging.info("------------bed Time Start-------------")
-    #         logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
-    #         logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
-    #         logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
-
-           
-
-    #         self.m_StartTime = datetime.datetime.now()
-
-    #         self.m_reclinerHead.DOWN()
-    #         self.m_reclinerFoot.DOWN()
-
-    #         for i in range(0, constant.HeadDown * 10):
-    #             if self.m_isMode:
-    #                 if(i%2 == 0 and start >= 0): 
-    #                     logging.info("BRIGHT : " + str(start))  
-    #                     self.m_led.ledPWM(start)
-    #                     start = start - constant.duty     
-                    
-    #                 if(i == constant.FootDown * 10):
-    #                     self.m_reclinerFoot.STOP()
-    #                 time.sleep(0.1)
-    #             else:
-    #                 break
-
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()
-
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
-            
-    #     elif _power == "stop":
-    #         logging.info("------------bed Time Stop-------------")
-
-            
-    #         self.m_reclinerFoot.STOP()
-    #         self.m_reclinerHead.STOP()    
-
-    #         #   
-    #         self.m_led.ledPWM(100)
-    #         _object.CLIENT()
-
-            
-    #     self.m_isMode = False                 
-    #     logging.info("bedTime : " + _power + " ---------------END----------------")
-
-
-    # def wakeupEvent3(self, _power, _object):
-
-    #     start = constant.wakeUpBrightStart
-    #     end = constant.wakeUpBrightEnd
-    #     self.m_isMode = True
-    #     self.m_reclinerHead.STOP()
-    #     self.m_reclinerFoot.STOP()
-
-    #     if(_power == "start"):
-
-    #         logging.info("------------wake Up Start-------------")
-    #         logging.info("HEAD Up Time : " + str(constant.HeadUp) + " FOOT Up Time : " + str(constant.FootUp))
-    #         logging.info("HEAD down Time : " + str(constant.HeadDown) + " FOOT down Time : " + str(constant.FootDown))
-    #         logging.info("LED DUTY : " + str(constant.duty) + " LED FREQUENCY : " + str(constant.frequency))
-
-    #         self.m_StartTime = datetime.datetime.now()
-
-    #         self.m_reclinerHead.UP()
-    #         self.m_reclinerFoot.UP()
-
-    #         for i in range(0, constant.HeadUp * 10):
-    #             if self.m_isMode:
-                    
-    #                 if(i%2 == 0 and  start  <= 100 ): 
-    #                     logging.info("BRIGHT : " + str(start)) 
-    #                     self.m_led.ledPWM(start)
-    #                     start = start + constant.duty        
-    #                 time.sleep(0.1)
-
-    #                 if( i == constant.FootUp * 10):
-    #                     self.m_reclinerFoot.STOP()
-    #             else:
-    #                 break
-
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()
-
-    #         for i in range(0, constant.WaitTime * 10):
-    #             if self.m_isMode == False:
-    #                 break
-    #             time.sleep(0.1)
-
-
-    #     elif _power == "stop":
-
-    #         logging.info("------------wake Up Stop-------------")
-
-    #         self.m_reclinerHead.STOP()         
-    #         self.m_reclinerFoot.STOP()  
-
-    #         self.m_led.ledPWM(0)
-    #         _object.CLIENT()
-
-    #     self.m_isMode = False                 
-    #     logging.info("WAKEUP : "+ _power + " ---------------END----------------") 
-
-
     def alignEvent(self, _power, _object):
         
-
         zoneMSTime = constant.zonTime * 10
         self.m_isMode = True
-        if _power == "start":
 
-            logging.info("------------Alignment Start-------------")
-            logging.info("analysis Time : " + str(constant.analysisDelay) + " AIR INPUT TOTAL TIME(MS) : " + str(zoneMSTime))
-            #logging.info("Zone_1 Time : " + str(constant.open_zone_1) + " Zone_2 Time : " + str(constant.open_zone_2) + " Zone_3 Time : " + str(constant.open_zone_3) + " Zone_4 Time : " + str(constant.open_zone_4))
+        zoneIndex = [2,3,4,5]
+        count = 0
 
-            self.m_StartTime = datetime.datetime.now()
-            # 5초간 몸 분석을 시작한다.
-            self.m_pump.pumpOFF(False)
+        for power, zone in zip (_power, zoneIndex):
 
+            self.m_sol.ON(zone, True)
+            time.sleep(constant.MeasureDelay)
+            count = 0
 
-            for i in range(0, constant.analysisDelay * 10):
-                self.m_sol.multiON([1,2,3,4,5])
-                
-                if(self.m_isMode == False):
-                    break
-                time.sleep(0.1)
-
-
-            self.m_sol.multiOFF([1,2,3,4,5])
-            ######################################################
-
-
-            #2번 열고, 2초 측정시간 갖은 다음, Pump 주입 시작
-            self.m_pump.pumpON(False)
-            self.m_sol.ON(2, True)
-
-            if(self.m_isMode):
-                time.sleep(constant.MeasureDelay)
-
-            zoneMSTime = zoneMSTime - constant.MeasureDelay * 10 
-            volt = self.m_psi.getVoltage()
-            logging.info("INDEX 2 OPEN Measure Volt : " + str(volt))
- 
-
-            for i in range(0, zoneMSTime):
+            while count < 80:
                 volt = self.m_psi.getVoltage()
 
-                if constant.maxPSI <= volt:
+                if abs(power - volt) <= constant.ValueInterval:
+
+                    self.m_sol.OFF(zone, False) 
+                    self.m_sol.OFF(1, False)  
                     self.m_pump.pumpOFF(False)
-                    break;
-
-                if(self.m_isMode == False):
                     break
+
+                else:
+                    if (power >= volt):
+                        self.m_sol.ON(1, False)               
+                    else:
+                        self.m_pump.pumpON(False)
+
                 time.sleep(0.1)
-                self.m_pump.pumpON(False)
-                zoneMSTime = zoneMSTime - 1    
-
-            self.m_pump.pumpOFF(False)
-            self.m_sol.OFF(2, True)
-
-
-            ########################################################
-
-            self.m_sol.ON(3, True)
+                count += 1
             
-            if(self.m_isMode):
-                time.sleep(constant.MeasureDelay)
+            self.m_sol.OFF(zone, False)
 
-            zoneMSTime = zoneMSTime - constant.MeasureDelay * 10 
-
-            volt = self.m_psi.getVoltage()
-            logging.info("INDEX 3 OPEN Measure Volt : " + str(volt))
-
-            for i in range(0, zoneMSTime):
-                volt = self.m_psi.getVoltage()
-
-                if constant.maxPSI <= volt:
-                    self.m_pump.pumpOFF(False)
-                    break;
-                if(self.m_isMode == False):
-                    break
-                time.sleep(0.1)    
-                self.m_pump.pumpON(False)
-                zoneMSTime = zoneMSTime - 1    
-
-            self.m_pump.pumpOFF(False)
-            self.m_sol.OFF(3, True)
-
-            ##########################################################
-            self.m_sol.ON(4, True)
-
-            if(self.m_isMode):
-                time.sleep(constant.MeasureDelay)
-
-            zoneMSTime = zoneMSTime - constant.MeasureDelay * 10 
-            volt = self.m_psi.getVoltage()
-            logging.info("INDEX 4 OPEN Measure Volt : " + str(volt))
-
-            for i in range(0, zoneMSTime):
-                volt = self.m_psi.getVoltage()
-
-                if constant.maxPSI <= volt:
-                    self.m_pump.pumpOFF(False) 
-                    logging.info("INDEX 4 HARD : " + str(volt))
-                    break;
-
-                if(self.m_isMode == False):
-                    break
-                self.m_pump.pumpON(False)    
-                time.sleep(0.1)    
-                zoneMSTime = zoneMSTime - 1 
-
-
-            self.m_pump.pumpOFF(False)
-            self.m_sol.OFF(4, True)
-
-            ##########################################################
-
-            self.m_sol.ON(5,True)
-
-            if(self.m_isMode):
-                time.sleep(constant.MeasureDelay)
-
-            zoneMSTime = zoneMSTime - constant.MeasureDelay * 10 
-            volt = self.m_psi.getVoltage()
-            logging.info("INDEX 5 OPEN Measure Volt : " + str(volt))
-
-            for i in range(0, zoneMSTime):
-                volt = self.m_psi.getVoltage()
-
-                if constant.maxPSI <= volt:
-                    self.m_pump.pumpOFF(False) 
-                    logging.info("INDEX 5 HARD : " + str(volt))
-                    break;
-
-                if(self.m_isMode == False):
-                    break
-
-                self.m_pump.pumpON(False)    
-                time.sleep(0.1)        
-
-            self.m_pump.pumpOFF(False)
-            self.m_sol.OFF(5, True)
-
-        else: # _power stop
-            logging.info("------------Alignment Stop-------------")
-
-
-            self.m_EndTime = datetime.datetime.now()
-
-            work_time = self.m_EndTime - self.m_StartTime
-            getbackTime = int(work_time.total_seconds())            
-
-            logging.info("[ALIGNMENT] get back work Time : " + str(getbackTime))
-
-            self.m_pump.pumpOFF(True)
-
-            self.m_sol.multiON([1,2,3,4,5])
-
-            for i in range(0, getbackTime * 10):
-                time.sleep(0.1)
-                # if(volt <= constant.minPSI):
-                #     break
-            _object.CLIENT() 
-
-        self.m_sol.multiOFF([1,2,3,4,5])
-        self.m_pump.pumpOFF(True)
+        self.m_sol.OFF(zoneIndex, False)
+        self.m_sol.OFF(1, False)  
+        self.m_pump.pumpOFF(False)
         self.m_isMode = False
         logging.info("alignment : " + _power + " ---------------END----------------")
-
-
+            
     def lightEvent(self, _power):
 
         if(_power == "on"):
@@ -1104,6 +562,7 @@ class Qprocess(threading.Thread):
         if(_power == "on"):
 
             self.m_purifier.ON(True)
+
         elif(_power == "off"):
             
             self.m_purifier.OFF(True)
