@@ -504,7 +504,7 @@ class Qprocess(threading.Thread):
 
         self.m_isMode = False                 
         logging.info("WAKEUP : "+ _power + " ---------------END----------------")
-        
+
     def alignEvent(self, _power, _zone):
         
 
@@ -512,28 +512,32 @@ class Qprocess(threading.Thread):
         self.m_isMode = True
 
         zoneIndex = [2,3,4,5]
+        outSol = [1,6,7]
         count = 0
-
+        
         for power, zone in zip (_zone, zoneIndex):
 
             self.m_sol.ON(zone, True)
+            logging.info("SOL INDEX : " + str(zone) + " DST PSI : " + str(power) + " ZONE TIMEOUT : " + str(constant.zoneTimeout/10))
             time.sleep(constant.MeasureDelay)
             count = 0
 
-            while count < 80:
+            while count < constant.zoneTimeout:
                 volt = self.m_psi.getVoltage()
 
                 if abs(power - volt) <= constant.ValueInterval:
 
                     self.m_sol.OFF(zone, False) 
-                    self.m_sol.OFF(1, False)  
+                    self.m_sol.multiOFF(outSol)  
                     self.m_pump.pumpOFF(False)
                     break
 
                 else:
                     if (power >= volt):
-                        self.m_sol.ON(1, False)               
+
+                        self.m_sol.multiON(outSol)       
                     else:
+
                         self.m_pump.pumpON(False)
 
                 time.sleep(0.1)
@@ -542,7 +546,7 @@ class Qprocess(threading.Thread):
             self.m_sol.OFF(zone, False)
 
         self.m_sol.OFF(zoneIndex, False)
-        self.m_sol.OFF(1, False)  
+        self.m_sol.multiOFF(outSol)   
         self.m_pump.pumpOFF(False)
         self.m_isMode = False
         logging.info("alignment : " + _power + " ---------------END----------------")
