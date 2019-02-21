@@ -90,10 +90,10 @@ class joB:
     def POWER(self):
         return self.m_JSON['power']   
 
-    def JONE(self):
+    def ZONE(self):
 
         zone = [];
-        
+
         zone.append(self.m_JSON['zone_1'])  
         zone.append(self.m_JSON['zone_2']) 
         zone.append(self.m_JSON['zone_3']) 
