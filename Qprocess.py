@@ -159,36 +159,29 @@ class Qprocess(threading.Thread):
 
                     if(self.m_isMode):
                         self.m_isMode = False
-                        time.sleep(3)
-
-                        thread = threading.Thread(target=self.bedtimeEvent, args=(power, unit))
-                        thread.start()             
+                         
                     else:
                         self.m_isMode = True
                         thread = threading.Thread(target=self.bedtimeEvent, args=(power, unit))
                         thread.start()             
 
                 elif "alignment" in cmd:
-
+                    
                     if(self.m_isMode):
                         self.m_isMode = False
-                        time.sleep(3)
 
-                        thread = threading.Thread(target=self.alignEvent, args=(power, unit))
-                        thread.start()   
+                        # thread = threading.Thread(target=self.alignEvent, args=(power, unit))
+                        # thread.start()   
                     else:
                         time.sleep(1)
-
-                        thread = threading.Thread(target=self.alignEvent, args=(power, unit))
+                        zone = unit.ZONE()
+                        thread = threading.Thread(target=self.alignEvent, args=(power, zone))
                         thread.start()   
                         
                 elif "wakeup" in cmd:
                     if(self.m_isMode):
                         self.m_isMode = False
-                        time.sleep(3)
-
-                        thread = threading.Thread(target=self.wakeupEvent, args=(power, unit))
-                        thread.start()             
+                               
                     else:
                         time.sleep(1)
                         thread = threading.Thread(target=self.wakeupEvent, args=(power, unit))
@@ -478,9 +471,6 @@ class Qprocess(threading.Thread):
                     break
             logging.info("foot recliner stop")
             self.m_reclinerFoot.STOP()
-
-
-
             self.m_reclinerHead.STOP()         
             self.m_reclinerFoot.STOP()
 
@@ -518,7 +508,7 @@ class Qprocess(threading.Thread):
         for power, zone in zip (_zone, zoneIndex):
 
             self.m_sol.ON(zone, True)
-            logging.info("SOL INDEX : " + str(zone) + " DST PSI : " + str(power) + " ZONE TIMEOUT : " + str(constant.zoneTimeout/10))
+            logging.info("SOL INDEX : " + str(zone) + " DST PSI : " + str(power) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
             time.sleep(constant.MeasureDelay)
             count = 0
 
@@ -539,6 +529,9 @@ class Qprocess(threading.Thread):
                     else:
 
                         self.m_pump.pumpON(False)
+
+                if(self.m_isMode == False):
+                    break;
 
                 time.sleep(0.1)
                 count += 1
