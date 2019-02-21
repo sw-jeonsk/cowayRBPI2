@@ -160,6 +160,7 @@ class Qprocess(threading.Thread):
                     if(self.m_isMode):
                         self.m_isMode = False
                          
+                        unit.CLIENT() 
                     else:
                         self.m_isMode = True
                         thread = threading.Thread(target=self.bedtimeEvent, args=(power, unit))
@@ -171,7 +172,9 @@ class Qprocess(threading.Thread):
                         self.m_isMode = False
 
                         # thread = threading.Thread(target=self.alignEvent, args=(power, unit))
-                        # thread.start()   
+                        # thread.start()  
+                        # 
+                        unit.CLIENT() 
                     else:
                         time.sleep(1)
                         zone = unit.ZONE()
@@ -180,8 +183,10 @@ class Qprocess(threading.Thread):
                         
                 elif "wakeup" in cmd:
                     if(self.m_isMode):
+
                         self.m_isMode = False
-                               
+                        unit.CLIENT()       
+
                     else:
                         time.sleep(1)
                         thread = threading.Thread(target=self.wakeupEvent, args=(power, unit))
@@ -404,15 +409,15 @@ class Qprocess(threading.Thread):
 
 
 
-        elif _power == "stop":
-            logging.info("------------bed Time Stop-------------")
+        # elif _power == "stop":
+        #     logging.info("------------bed Time Stop-------------")
 
 
-            self.m_reclinerFoot.STOP()
-            self.m_reclinerHead.STOP()    
-            #   
-            self.m_led.ledPWM(100)
-            _object.CLIENT()
+        #     self.m_reclinerFoot.STOP()
+        #     self.m_reclinerHead.STOP()    
+        #     #   
+        #     self.m_led.ledPWM(100)
+        #     _object.CLIENT()
         
         self.m_reclinerHead.STOP()         
         self.m_reclinerFoot.STOP()
@@ -480,17 +485,20 @@ class Qprocess(threading.Thread):
                 time.sleep(0.1)
 
 
-        elif _power == "stop":
+        # elif _power == "stop":
 
-            logging.info("------------wake Up Stop-------------")
+        #     logging.info("------------wake Up Stop-------------")
 
-            self.m_reclinerHead.STOP()         
-            self.m_reclinerFoot.STOP()  
+        #     self.m_reclinerHead.STOP()         
+        #     self.m_reclinerFoot.STOP()  
 
 
             
-            self.m_led.ledPWM(0)
-            _object.CLIENT()
+        #     self.m_led.ledPWM(0)
+        #     _object.CLIENT()
+
+        self.m_reclinerHead.STOP()         
+        self.m_reclinerFoot.STOP()  
 
         self.m_isMode = False                 
         logging.info("WAKEUP : "+ _power + " ---------------END----------------")
