@@ -97,8 +97,8 @@ class Qprocess(threading.Thread):
                     unit.CLIENT()
 
                 elif "air" in cmd:
-
-                    self.alignEvent(power, unit)
+                    zone = unit.ZONE()
+                    self.alignEvent(power, zone)
                     unit.CLIENT()
                     
 
@@ -506,7 +506,7 @@ class Qprocess(threading.Thread):
         logging.info("WAKEUP : "+ _power + " ---------------END----------------") 
     
 
-    def alignEvent(self, _power, _object):
+    def alignEvent(self, _power, _zone):
         
         zoneMSTime = constant.zonTime * 10
         self.m_isMode = True
@@ -514,7 +514,7 @@ class Qprocess(threading.Thread):
         zoneIndex = [2,3,4,5]
         count = 0
 
-        for power, zone in zip (_power, zoneIndex):
+        for power, zone in zip (_zone, zoneIndex):
 
             self.m_sol.ON(zone, True)
             time.sleep(constant.MeasureDelay)

@@ -90,6 +90,17 @@ class joB:
     def POWER(self):
         return self.m_JSON['power']   
 
+    def JONE(self):
+
+        zone = [];
+        
+        zone.append(self.m_JSON['zone_1'])  
+        zone.append(self.m_JSON['zone_2']) 
+        zone.append(self.m_JSON['zone_3']) 
+        zone.append(self.m_JSON['zone_4'])   
+
+        return zone;
+
 
 headValue = 0
 feetValue = 0
