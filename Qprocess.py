@@ -503,7 +503,6 @@ class Qprocess(threading.Thread):
             _object.CLIENT()
 
         self.m_isMode = False                 
-        logging.info("WAKEUP : "+ _power + " ---------------END----------------") 
 
     def alignEvent(self, _power, _zone):
         
