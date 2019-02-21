@@ -545,7 +545,7 @@ class Qprocess(threading.Thread):
             
             self.m_sol.OFF(zone, False)
 
-        self.m_sol.OFF(zoneIndex, False)
+        self.m_sol.multiOFF(zoneIndex)
         self.m_sol.multiOFF(outSol)   
         self.m_pump.pumpOFF(False)
         self.m_isMode = False
