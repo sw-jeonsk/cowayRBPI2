@@ -36,7 +36,7 @@ open_zone_2 = 6 #second
 open_zone_3 = 7 #second
 open_zone_4 = 7 #second
 zone_interval = 1 #second
-zoneTimeout = 80 #0.1s
+zoneTimeout = 800 #0.01s
 ######control
 modeStopDelay = 3 #second
 zoneSoftDelay = 5 #second

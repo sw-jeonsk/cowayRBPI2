@@ -506,7 +506,7 @@ class Qprocess(threading.Thread):
     def alignEvent(self, _power, _zone):
         
 
-        zoneMSTime = constant.zonTime * 10
+        zoneMSTime = constant.zonTime * 100
         self.m_isMode = True
 
         zoneIndex = [2,3,4,5]
