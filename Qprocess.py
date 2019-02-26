@@ -548,7 +548,7 @@ class Qprocess(threading.Thread):
                 if(self.m_isMode == False):
                     break;
 
-                time.sleep(0.1)
+                time.sleep(0.01)
                 count += 1
             
             self.m_sol.OFF(zone, False)
