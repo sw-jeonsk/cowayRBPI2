@@ -192,9 +192,9 @@ class Qprocess(threading.Thread):
                         thread = threading.Thread(target=self.wakeupEvent, args=(power, unit))
                         thread.start()             
 
-            if(self.m_count >= 300):
+            if(self.m_count >= 100):
                 volt = self.m_psi.getVoltage()
-                logging.info("NOW VOLT : " + str(volt))
+                logging.info("NOW PSI : " + str(volt))
                 self.m_count = 0
             constant.lock.release()
 
@@ -516,8 +516,10 @@ class Qprocess(threading.Thread):
         for power, zone in zip (_zone, zoneIndex):
 
             self.m_sol.ON(zone, True)
-            logging.info("SOL INDEX : " + str(zone) + " DST PSI : " + str(power) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
             time.sleep(constant.MeasureDelay)
+            volt = self.m_psi.getVoltage()
+            logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) +" NOW PSI : " + str(volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
+
             count = 0
 
             while count < constant.zoneTimeout:
@@ -525,18 +527,23 @@ class Qprocess(threading.Thread):
 
                 if abs(power - volt) <= constant.ValueInterval:
 
+                    logging.info("result PSI : " + str(volt))
                     self.m_sol.OFF(zone, False) 
                     self.m_sol.multiOFF(outSol)  
                     self.m_pump.pumpOFF(False)
                     break
 
                 else:
+                    logging.info("PSI : " + str(volt))
+                    #1 > 3.3
                     if (power >= volt):
-
-                        self.m_sol.multiON(outSol)       
-                    else:
-
+                        
                         self.m_pump.pumpON(False)
+                        self.m_sol.multiOFF(outSol)       
+                    else:
+                        
+                        self.m_pump.pumpOFF(False)
+                        self.m_sol.multiON(outSol)
 
                 if(self.m_isMode == False):
                     break;
