@@ -93,12 +93,26 @@ class joB:
     def ZONE(self):
 
         zone = [];
+        if 'zone_1' in self.m_JSON.keys():
+            zone.append(self.m_JSON['zone_1'])  
+        else:
+            zone.append(0)
 
-        zone.append(self.m_JSON['zone_1'])  
-        zone.append(self.m_JSON['zone_2']) 
-        zone.append(self.m_JSON['zone_3']) 
-        zone.append(self.m_JSON['zone_4'])   
+        if 'zone_2' in self.m_JSON.keys():
+            zone.append(self.m_JSON['zone_2'])  
+        else:
+            zone.append(0)
+            
+        if 'zone_3' in self.m_JSON.keys():
+            zone.append(self.m_JSON['zone_3'])  
+        else:
+            zone.append(0)    
 
+        if 'zone_4' in self.m_JSON.keys():
+            zone.append(self.m_JSON['zone_4'])  
+        else:
+            zone.append(0)                
+       
         return zone;
 
 

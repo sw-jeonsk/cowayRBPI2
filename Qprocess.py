@@ -517,10 +517,14 @@ class Qprocess(threading.Thread):
         
         for power, zone in zip (_zone, zoneIndex):
 
+
+            if power == 0:
+                continue
+
             self.m_sol.ON(zone, True)
             time.sleep(constant.MeasureDelay)
             volt = self.m_psi.getVoltage()
-            logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) +" NOW PSI : " + str(volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
+            logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) +" NOW PSI : " + str(volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/100))
 
             count = 0
             decide = False
@@ -528,7 +532,7 @@ class Qprocess(threading.Thread):
             while count < constant.zoneTimeout:
                 volt = self.m_psi.getVoltage()
                 
-                if (power >= volt):
+                if (power >= volt) and (count/100 == 0):
                     
                     self.m_pump.pumpON(False)
                     self.m_sol.multiOFF(outSol)       
@@ -537,12 +541,10 @@ class Qprocess(threading.Thread):
                     self.m_pump.pumpOFF(False)
                     self.m_sol.multiON(outSol)
 
-
-
                 if abs(power - volt) <= constant.ValueInterval:
                     isNext += 1
 
-                    if isNext > 3:        
+                    if isNext > 4:        
                         isNext = 0
                         logging.info("result PSI : " + str(volt))
                         self.m_sol.OFF(zone, False) 
@@ -570,6 +572,7 @@ class Qprocess(threading.Thread):
         self.m_isMode = False
         logging.info("alignment : " + _power + " ---------------END----------------")
             
+
     def lightEvent(self, _power):
 
         if(_power == "on"):
