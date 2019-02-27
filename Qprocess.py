@@ -510,8 +510,10 @@ class Qprocess(threading.Thread):
         self.m_isMode = True
 
         zoneIndex = [2,3,4,5]
-        outSol = [1,6,7]
+        outSol = [1]
         count = 0
+        isNext = 0
+        decide = False
         
         for power, zone in zip (_zone, zoneIndex):
 
@@ -521,29 +523,38 @@ class Qprocess(threading.Thread):
             logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) +" NOW PSI : " + str(volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
 
             count = 0
+            decide = False
 
             while count < constant.zoneTimeout:
                 volt = self.m_psi.getVoltage()
+                
+                if (power >= volt):
+                    
+                    self.m_pump.pumpON(False)
+                    self.m_sol.multiOFF(outSol)       
+                else:
+                    
+                    self.m_pump.pumpOFF(False)
+                    self.m_sol.multiON(outSol)
+
+
 
                 if abs(power - volt) <= constant.ValueInterval:
+                    isNext += 1
 
-                    logging.info("result PSI : " + str(volt))
-                    self.m_sol.OFF(zone, False) 
-                    self.m_sol.multiOFF(outSol)  
-                    self.m_pump.pumpOFF(False)
-                    break
+                    if isNext > 3:        
+                        isNext = 0
+                        logging.info("result PSI : " + str(volt))
+                        self.m_sol.OFF(zone, False) 
+                        self.m_sol.multiOFF(outSol)  
+                        self.m_pump.pumpOFF(False)
+                        break
+
 
                 else:
+                    isNext = 0
                     logging.info("PSI : " + str(volt))
                     #1 > 3.3
-                    if (power >= volt):
-                        
-                        self.m_pump.pumpON(False)
-                        self.m_sol.multiOFF(outSol)       
-                    else:
-                        
-                        self.m_pump.pumpOFF(False)
-                        self.m_sol.multiON(outSol)
 
                 if(self.m_isMode == False):
                     break;
