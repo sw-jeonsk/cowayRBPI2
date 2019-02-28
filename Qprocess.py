@@ -519,14 +519,17 @@ class Qprocess(threading.Thread):
             avg_volt = self.average(voltList)
                 
 
-            logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) +" NOW PSI : " + str(avg_volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
+            logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) + " NOW PSI : " + str(avg_volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
 
             if (power > avg_volt):
+
                 logging.info("AIR IN....")
                 self.m_pump.pumpON(False)
                 self.m_sol.OFF(1, False)
                 air = "IN"
+
             else:
+
                 air = "OUT"
                 logging.info("AIR OUT....")
                 self.m_pump.pumpOFF(False)
@@ -546,6 +549,9 @@ class Qprocess(threading.Thread):
                         break
                 if(self.m_isMode == False):
                     break;
+
+                if (volt == 0.0):
+                    break    
 
                 logging.info("VOLT: "+ str(volt))
 
