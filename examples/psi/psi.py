@@ -24,16 +24,54 @@ class psi():
         processedData = ((rawData[1] & 3) << 8) + rawData[2]
         return processedData
     
+    #original
     def convertVoltage(self, bitValue, decimalPlaces=2):
         voltage = (bitValue * 3.3) / float(1023)
         voltage = round(voltage, decimalPlaces)
+
         return voltage
 
+        
     def getVoltage(self):
         data = self.read()
         voltage = self.convertVoltage(data)
 
         return voltage
+
+    #1 : voltage 계산을 4.5로 변경 
+    def test_1(self, decimalPlaces=2):
+        data = self.read()
+        voltage = (data * 4.5) / float(1023)
+        voltage = round(voltage, decimalPlaces)
+        return voltage  
+
+
+    #2 : psi 계산 공식 적용
+    def test_2(self, decimalPlaces=2):
+        data = self.read()
+        voltage = (data * 3.3) / float(1023)
+        voltage = round(voltage, decimalPlaces)
+
+        if (voltage < 0.5):
+            psi = 0
+        else:
+            psi = round((voltage - 0.5) * 10 / 8, decimalPlaces)
+
+        return psi      
+
+    #3 : psi 계산 공식 적용  + voltage 계산을 4.5로 변경
+    def test_3(self, decimalPlaces=2):
+        data = self.read()
+        voltage = (data * 4.5) / float(1023)
+        voltage = round(voltage, decimalPlaces)
+
+        if (voltage < 0.5):
+            psi = 0
+        else:
+            psi = round((voltage - 0.5) * 10 / 8, decimalPlaces)
+
+        return psi  
+
 
     def spiClose(self):
         self.m_spi.close()

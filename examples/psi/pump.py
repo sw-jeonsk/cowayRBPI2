@@ -1,9 +1,7 @@
 import RPi.GPIO as GPIO
 
-
 class pump():
     def __init__(self, _gpio):
-
         self.m_pump = _gpio
 
         GPIO.setmode(GPIO.BOARD)
@@ -11,10 +9,10 @@ class pump():
         GPIO.output(self.m_pump, False)
 
 
-    def pumpON(self):
+    def pumpON(self, log):
         GPIO.output(self.m_pump, True)
 
-    def pumpOFF(self):
+    def pumpOFF(self, log):
         GPIO.output(self.m_pump, False)
 
     def pumpClose(self):

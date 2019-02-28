@@ -170,10 +170,7 @@ class Qprocess(threading.Thread):
                     
                     if(self.m_isMode):
                         self.m_isMode = False
-
-                        # thread = threading.Thread(target=self.alignEvent, args=(power, unit))
-                        # thread.start()  
-                        # 
+                        
                         unit.CLIENT() 
                     else:
                         time.sleep(1)
@@ -485,23 +482,17 @@ class Qprocess(threading.Thread):
                 time.sleep(0.1)
 
 
-        # elif _power == "stop":
-
-        #     logging.info("------------wake Up Stop-------------")
-
-        #     self.m_reclinerHead.STOP()         
-        #     self.m_reclinerFoot.STOP()  
-
-
-            
-        #     self.m_led.ledPWM(0)
-        #     _object.CLIENT()
-
         self.m_reclinerHead.STOP()         
         self.m_reclinerFoot.STOP()  
 
         self.m_isMode = False                 
         logging.info("WAKEUP : "+ _power + " ---------------END----------------")
+
+    def average(self ,_list):
+        value = 0
+        for item in _list:
+            value += item
+        return round(value/len(_list),1)
 
     def alignEvent(self, _power, _zone):
         
@@ -513,57 +504,55 @@ class Qprocess(threading.Thread):
         outSol = [1]
         count = 0
         isNext = 0
-        decide = False
-        
+        voltList = [] 
+        air = "OUT"
         for power, zone in zip (_zone, zoneIndex):
-
-
-            if power == 0:
-                continue
 
             self.m_sol.ON(zone, True)
             time.sleep(constant.MeasureDelay)
-            volt = self.m_psi.getVoltage()
-            logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) +" NOW PSI : " + str(volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/100))
+            
+            for i in range(0, 5):
+                volt = self.m_psi.getVoltage()
+                voltList.append(volt)
+                time.sleep(0.1)
 
-            count = 0
-            decide = False
+            avg_volt = self.average(voltList)
+                
 
-            while count < constant.zoneTimeout:
+            logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) +" NOW PSI : " + str(avg_volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
+
+            if (power > avg_volt):
+                logging.info("AIR IN....")
+                self.m_pump.pumpON(False)
+                self.m_sol.OFF(1, False)
+                air = "IN"
+            else:
+                air = "OUT"
+                logging.info("AIR OUT....")
+                self.m_pump.pumpOFF(False)
+                self.m_sol.ON(1, False)
+            
+
+            #while count < constant.zoneTimeout:
+            while True:
+
                 volt = self.m_psi.getVoltage()
                 
-                if (power >= volt) and (count/100 == 0):
-                    
-                    self.m_pump.pumpON(False)
-                    self.m_sol.multiOFF(outSol)       
-                else:
-                    
-                    self.m_pump.pumpOFF(False)
-                    self.m_sol.multiON(outSol)
-
-                if abs(power - volt) <= constant.ValueInterval:
-                    isNext += 1
-
-                    if isNext > 4:        
-                        isNext = 0
-                        logging.info("result PSI : " + str(volt))
-                        self.m_sol.OFF(zone, False) 
-                        self.m_sol.multiOFF(outSol)  
-                        self.m_pump.pumpOFF(False)
+                if air == "IN":
+                    if(volt - power) > 0:
                         break
-
-
-                else:
-                    isNext = 0
-                    logging.info("PSI : " + str(volt))
-                    #1 > 3.3
-
+                if air == "OUT":
+                    if(volt - power) < 0:
+                        break
                 if(self.m_isMode == False):
                     break;
 
+                logging.info("VOLT: "+ str(volt))
+
                 time.sleep(0.01)
-                count += 1
-            
+
+            self.m_pump.pumpOFF(True) 
+            self.m_sol.OFF(1, True)
             self.m_sol.OFF(zone, False)
 
         self.m_sol.multiOFF(zoneIndex)
@@ -572,7 +561,6 @@ class Qprocess(threading.Thread):
         self.m_isMode = False
         logging.info("alignment : " + _power + " ---------------END----------------")
             
-
     def lightEvent(self, _power):
 
         if(_power == "on"):

@@ -25,12 +25,15 @@ class psi():
         return processedData
     
     def convertVoltage(self, bitValue, decimalPlaces=2):
-        voltage = (bitValue * 3.3) / float(1023)
+        voltage = (bitValue * 4.5) / float(1023)
         voltage = round(voltage, decimalPlaces)
 
+        if (voltage < 0.5):
+            psi = 0
+        else:
+            psi = round((voltage - 0.5) * 10 / 8, decimalPlaces)
 
-        psi = round((voltage - 0.5) * 10 / 8, decimalPlaces)
-        return psi
+        return voltage
 
     def getVoltage(self):
         data = self.read()
