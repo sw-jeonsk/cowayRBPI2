@@ -425,6 +425,9 @@ class Qprocess(threading.Thread):
 
         for power, zone in zip (_zone, zoneIndex):
 
+            if power == -1:
+                continue
+                
             self.m_sol.ON(zone, True)
             time.sleep(constant.MeasureDelay)
             
