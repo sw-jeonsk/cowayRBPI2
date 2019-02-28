@@ -164,52 +164,6 @@ class Qprocess(threading.Thread):
             time.sleep(0.1)
         logging.info('Queue process thread the END')
     
-    #zone_1 -> sol_2
-    #zone_2 -> sol_3
-    #zone_3 -> sol_4
-    #zone_4 -> sol_
-    #thread로 동작하도록 구현 (PSI 값을 비교하여 break)
-    def zoneEvent(self, _cmd, _power, _index):
-
-        log = True
-        self.m_zoneFlag[_index] = True
-        count = 0   #jordan
-        
-        self.m_sol.ON(constant.ZONE[_cmd], True)
-
-        time.sleep(constant.MeasureDelay)
-
-        volt = self.m_psi.getVoltage()
-
-        if abs(_power - volt) >= constant.ValueInterval:
-            if _power > volt:
-
-                self.m_sol.ON(1, log)
-                while count < 150:
-
-                    volt = self.m_psi.getVoltage()
-
-                    if volt >= _power:
-                        break
-                    count += 1
-                    time.sleep(0.1) 
-            else:
-                self.m_pump.pumpON(log)
-                while count < 150:
-
-                    volt = self.m_psi.getVoltage()
-
-                    if volt <= _power:
-                        break
-                        
-                    count += 1
-                    time.sleep(0.1)    
-
-        self.m_sol.OFF(1, True)
-        self.m_sol.OFF(constant.ZONE[_cmd], True)
-        self.m_pump.pumpOFF(True)            
-        self.m_zoneFlag[_index] = False
-        logging.info(_cmd + " zone END")
 
     # count동작시키기, 리클라이너 하나씩 동작시키기 
     def headEvent(self, _cmd, _power):
@@ -563,20 +517,11 @@ class Qprocess(threading.Thread):
 
                 volt = self.m_psi.getVoltage()
                 
-                if air == "IN":
-                    if(volt - power) > 0:
-                        break
-                if air == "OUT":
-                    if(volt - power) < 0:
-                        break
-
-                if(self.m_isMode == False):
-                    break;
-
-                if (volt == 0.0):
-                    
-                    break;   
-
+                if  (air == "IN" and (volt - power) > 0) or \
+                    (air == "OUT" and (volt - power) < 0) or \
+                    (self.m_isMode == False) or ((volt == 0.0)):                   
+                    break
+               
                 logging.info("PSI: "+ str(volt))
 
                 time.sleep(0.01)
