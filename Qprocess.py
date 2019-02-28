@@ -62,8 +62,8 @@ class Qprocess(threading.Thread):
 
                 if "zone_" in cmd:
 
-                    seperate = cmd.split("_")
-                    self.zoneEvent(cmd, power, seperate[1])
+                    zone = unit.ZONE()
+                    self.airEvent(power, zone)
                     logging.info("send zone response") #jordan
                     unit.CLIENT()
 
