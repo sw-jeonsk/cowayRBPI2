@@ -115,31 +115,5 @@ class joB:
        
         return zone;
 
-
-headValue = 0
-feetValue = 0
-
-
-class Data:
-    def __init__(self):
-        global headValue, feetValue
-        self.m_Data = {}
-        self.m_Data['zone_1'] = "soft"
-        self.m_Data['zone_2'] = "soft"
-        self.m_Data['zone_3'] = "soft"
-        self.m_Data['zone_4'] = "soft"
-
-        self.m_Data['headValue'] = headValue
-        self.m_Data['feetValue'] = feetValue
-        self.m_Data['led'] = "off"   
-        self.m_Data['purifier'] = "off"    
-
-    def change(self, cmd, value):
-        self.m_Data[cmd] = value        
-    
-    def value(self, cmd):
-        return self.m_Data[cmd]
-
-
 lock = threading.Lock()
 jobQ = Queue.deque()        

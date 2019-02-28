@@ -29,7 +29,6 @@ class Qprocess(threading.Thread):
         self.m_reclinerHead = reclinerHead.reclinerHead(constant.headGPIO) 
         self.m_led = led.led(constant.ledGPIO, constant.frequency)
         self.m_purifier = purifier.purifier(constant.purifierGPIO)
-        self.m_Data = constant.Data()
         self.m_isMode = False
         self.m_StartTime = 0
         self.m_EndTime = 0
@@ -41,34 +40,7 @@ class Qprocess(threading.Thread):
         self.m_count = 0
         self.m_zoneFlag = {"1":False, "2":False, "3":False, "4":False}
 
-
-        #self.DeviceInit()
-        # self.m_media = media.media()
-    def DeviceInit(self):
-        
-        logging.info("device init start.....")
-        #zone init....
-        if self.m_Data.value("zone_1") == "soft":
-            self.m_sol.multiON([1,2,3,4,5])
-        else:
-            self.m_pump.pumpON(True)
-            self.m_sol.multiON([2,3,4,5])
-
-        if self.m_Data.value("purifier") == "on":
-            self.m_purifier.ON(True)
-        else:
-            self.m_purifier.OFF(True)
-        
-        if self.m_Data.value("led") == "on":
-            self.m_led.ledPWM(constant.ledBright)
-        else:
-            self.m_led.ledPWM(0)
-
-
-        for i in range(0, constant.InitDelay):
-            time.sleep(1)
-        
-        logging.info("device init end.....")
+   
 
 
     def run(self):
@@ -90,20 +62,15 @@ class Qprocess(threading.Thread):
 
                 if "zone_" in cmd:
 
-                    #THREAD가 아닌거 
                     seperate = cmd.split("_")
                     self.zoneEvent(cmd, power, seperate[1])
                     logging.info("send zone response") #jordan
                     unit.CLIENT()
 
                 elif "air" in cmd:
-                    zone = unit.ZONE()
-                    self.alignEvent(power, zone)
-                    unit.CLIENT()
-                    
 
-                elif "reset" in cmd:
-                    self.resetEvent()
+                    zone = unit.ZONE()
+                    self.airEvent(power, zone)
                     unit.CLIENT()
 
                 elif "head" in cmd:
@@ -129,7 +96,6 @@ class Qprocess(threading.Thread):
 
                 elif "foot" in cmd:
 
-
                     if(self.footMode == False and self.m_isOperation == False):
                         self.footMode= True
                         self.m_isOperation = True
@@ -141,13 +107,11 @@ class Qprocess(threading.Thread):
                     elif(self.footMode == True):
                         self.footMode = False
                     
-
                         time.sleep(2)
                         self.m_EndTime = datetime.datetime.now()
 
                         thread = threading.Thread(target=self.footEvent, args=(cmd, power))
-                        thread.start()   
-                    
+                        thread.start()                      
                          
                 elif "light" in cmd:
                     self.lightEvent(power)
@@ -247,18 +211,6 @@ class Qprocess(threading.Thread):
         self.m_zoneFlag[_index] = False
         logging.info(_cmd + " zone END")
 
-    def resetEvent(self):
-        self.m_sol.multiON([1,2,3,4,5])
-
-        time.sleep(constant.resetDelay)
-
-        self.m_Data.change("zone_1", "soft")
-        self.m_Data.change("zone_2", "soft")
-        self.m_Data.change("zone_3", "soft")
-        self.m_Data.change("zone_4", "soft")
-
-        self.m_sol.multiOFF([1,2,3,4,5])
-    
     # count동작시키기, 리클라이너 하나씩 동작시키기 
     def headEvent(self, _cmd, _power):
         
@@ -494,9 +446,7 @@ class Qprocess(threading.Thread):
             value += item
         return round(value/len(_list),1)
 
-    def alignEvent(self, _power, _zone):
-        
-
+    def airEvent(self, _power, _zone):
         zoneMSTime = constant.zonTime * 100
         self.m_isMode = True
 
@@ -506,6 +456,7 @@ class Qprocess(threading.Thread):
         isNext = 0
         voltList = [] 
         air = "OUT"
+
         for power, zone in zip (_zone, zoneIndex):
 
             self.m_sol.ON(zone, True)
@@ -518,7 +469,6 @@ class Qprocess(threading.Thread):
 
             avg_volt = self.average(voltList)
                 
-
             logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) + " NOW PSI : " + str(avg_volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
 
             if (power > avg_volt):
@@ -554,6 +504,80 @@ class Qprocess(threading.Thread):
                     break    
 
                 logging.info("VOLT: "+ str(volt))
+
+                time.sleep(0.01)
+
+            self.m_pump.pumpOFF(True) 
+            self.m_sol.OFF(1, True)
+            self.m_sol.OFF(zone, False)
+
+        self.m_sol.multiOFF(zoneIndex)
+        self.m_sol.multiOFF(outSol)   
+        self.m_pump.pumpOFF(False)
+        self.m_isMode = False
+        logging.info("alignment : " + _power + " ---------------END----------------")
+
+    def alignEvent(self, _power, _zone):
+        
+        self.m_isMode = True
+
+        zoneIndex = [2,3,4,5]
+        outSol = [1]
+        count = 0
+        isNext = 0
+        voltList = [] 
+        air = "OUT"
+ 
+        for power, zone in zip (_zone, zoneIndex):
+
+            self.m_sol.ON(zone, True)
+            time.sleep(1)
+            
+            for i in range(0, 5):
+                volt = self.m_psi.getVoltage()
+                voltList.append(volt)
+                time.sleep(0.1)
+
+            avg_volt = self.average(voltList)
+                
+            logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) + " NOW PSI : " + str(avg_volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/100))
+
+            if (power > avg_volt):
+
+                logging.info("AIR IN....")
+                self.m_pump.pumpON(False)
+                self.m_sol.OFF(1, False)
+                air = "IN"
+
+            else:
+
+                air = "OUT"
+                logging.info("AIR OUT....")
+                self.m_pump.pumpOFF(False)
+                self.m_sol.ON(1, False)
+            
+            count = 0
+            while count < constant.zoneTimeout:
+            # while True:
+                count += 1
+
+                volt = self.m_psi.getVoltage()
+                
+                if air == "IN":
+                    if(volt - power) > 0:
+                        break
+                if air == "OUT":
+                    if(volt - power) < 0:
+                        break
+
+                if(self.m_isMode == False):
+                    break;
+
+                if (volt == 0.0):
+                    
+                    break;   
+
+                logging.info("PSI: "+ str(volt))
 
                 time.sleep(0.01)
 
