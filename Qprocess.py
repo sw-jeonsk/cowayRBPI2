@@ -466,8 +466,8 @@ class Qprocess(threading.Thread):
                     del voltList[0]
 
                 logging.info("PSI: "+ str(volt))
-                if  (air == "IN" and (volt - power) > 0) or \
-                    (air == "OUT" and (volt - power) < 0) or \
+                if ((air == "IN") and (volt - power) > 0) or \
+                    ((air == "OUT") and (volt - power) < 0) or \
                     (self.m_isMode == False) or (psiCheck == False):                   
                     break
                
