@@ -394,7 +394,7 @@ class Qprocess(threading.Thread):
         self.m_isMode = False                 
         logging.info("WAKEUP : "+ _power + " ---------------END----------------")
 
-    def voltCheck(self ,_list):
+    def psiCheck(self ,_list):
         _value = False
         
         for item in _list:
@@ -402,7 +402,7 @@ class Qprocess(threading.Thread):
                 _value = True
 
         return _value
-        
+
     def average(self, _list):
 
         _value = 0
@@ -456,19 +456,19 @@ class Qprocess(threading.Thread):
             #while count < constant.zoneTimeout:
             voltList = []
             while True:
-
+                isPsi = True
                 volt = self.m_psi.getVoltage()
-
+                
                 voltList.append(volt)
 
                 if len(voltList) == 5:
-                    psiCheck = self.voltCheck(voltList)
+                    isPsi = self.psiCheck(voltList)
                     del voltList[0]
 
                 logging.info("PSI: "+ str(volt))
                 if ((air == "IN") and (volt - power) > 0) or \
                     ((air == "OUT") and (volt - power) < 0) or \
-                    (self.m_isMode == False) or (psiCheck == False):                   
+                    (self.m_isMode == False) or (isPsi == False):                   
                     break
                
                 time.sleep(0.01)
