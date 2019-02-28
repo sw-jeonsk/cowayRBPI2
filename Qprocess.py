@@ -394,11 +394,23 @@ class Qprocess(threading.Thread):
         self.m_isMode = False                 
         logging.info("WAKEUP : "+ _power + " ---------------END----------------")
 
-    def average(self ,_list):
-        value = 0
+    def voltCheck(self ,_list):
+        _value = False
+        
         for item in _list:
-            value += item
-        return round(value/len(_list),1)
+            if item != 0.0:
+                _value = True
+
+        return _value
+        
+    def average(self, _list):
+
+        _value = 0
+
+        for item in _list:
+            _value += item
+
+        return _value / len(_list)
 
     def airEvent(self, _power, _zone):
         zoneMSTime = constant.zonTime * 100
@@ -421,6 +433,7 @@ class Qprocess(threading.Thread):
                 voltList.append(volt)
                 time.sleep(0.1)
 
+
             avg_volt = self.average(voltList)
                 
             logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) + " NOW PSI : " + str(avg_volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
@@ -441,24 +454,23 @@ class Qprocess(threading.Thread):
             
 
             #while count < constant.zoneTimeout:
+            voltList = []
             while True:
 
                 volt = self.m_psi.getVoltage()
-                
-                if air == "IN":
-                    if(volt - power) > 0:
-                        break
-                if air == "OUT":
-                    if(volt - power) < 0:
-                        break
-                if(self.m_isMode == False):
-                    break;
 
-                if (volt == 0.0):
-                    break    
+                voltList.append(volt)
 
-                logging.info("VOLT: "+ str(volt))
+                if len(voltList) == 5:
+                    psiCheck = self.voltCheck(voltList)
+                    del voltList[0]
 
+                logging.info("PSI: "+ str(volt))
+                if  (air == "IN" and (volt - power) > 0) or \
+                    (air == "OUT" and (volt - power) < 0) or \
+                    (self.m_isMode == False) or (psiCheck == False):                   
+                    break
+               
                 time.sleep(0.01)
 
             self.m_pump.pumpOFF(True) 
@@ -498,32 +510,33 @@ class Qprocess(threading.Thread):
 
             if (power > avg_volt):
 
-                logging.info("AIR IN....")
+                air = "IN"
                 self.m_pump.pumpON(False)
                 self.m_sol.OFF(1, False)
-                air = "IN"
+                
 
             else:
 
                 air = "OUT"
-                logging.info("AIR OUT....")
                 self.m_pump.pumpOFF(False)
                 self.m_sol.ON(1, False)
-            
-            count = 0
-            while count < constant.zoneTimeout:
-            # while True:
-                count += 1
 
+            logging.info("ZONE : " + str(zone - 1) + " DST : " + str(power) + " NOW : " + str(avg_volt) + " TMOUT(s) : " + str(constant.zoneTimeout/100) +" AIR : " + air)
+
+            count = 0
+
+            while count < constant.zoneTimeout:
+                # while True:
+                count += 1
                 volt = self.m_psi.getVoltage()
-                
-                if  (air == "IN" and (volt - power) > 0) or \
-                    (air == "OUT" and (volt - power) < 0) or \
-                    (self.m_isMode == False) or ((volt == 0.0)):                   
-                    break
-               
                 logging.info("PSI: "+ str(volt))
 
+                if  (air == "IN" and (volt - power) > 0) or \
+                    (air == "OUT" and (volt - power) < 0) or \
+                    (self.m_isMode == False):                   
+                
+                    break
+                
                 time.sleep(0.01)
 
             self.m_pump.pumpOFF(True) 
