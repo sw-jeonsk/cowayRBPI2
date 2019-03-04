@@ -423,62 +423,78 @@ class Qprocess(threading.Thread):
         voltList = [] 
         air = "OUT"
 
-        for power, zone in zip (_zone, zoneIndex):
+        if _power == "in":
+            for power, zone in zip (_zone, zoneIndex):
 
-            if power == -1:
-                continue
+                if power == -1:
+                    continue
+                    
+                self.m_sol.ON(zone, True)
+                time.sleep(constant.MeasureDelay)
                 
-            self.m_sol.ON(zone, True)
-            time.sleep(constant.MeasureDelay)
-            
-            for i in range(0, 5):
-                volt = self.m_psi.getVoltage()
-                voltList.append(volt)
-                time.sleep(0.1)
+                for i in range(0, 5):
+                    volt = self.m_psi.getVoltage()
+                    voltList.append(volt)
+                    time.sleep(0.1)
 
 
-            avg_volt = self.average(voltList)
+                avg_volt = self.average(voltList)
+                    
+                logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) + " NOW PSI : " + str(avg_volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
+
+                if (power > avg_volt):
+
+                    logging.info("AIR IN....")
+                    self.m_pump.pumpON(False)
+                    self.m_sol.OFF(1, False)
+                    air = "IN"
+
+                else:
+
+                    air = "OUT"
+                    logging.info("AIR OUT....")
+                    self.m_pump.pumpOFF(False)
+                    self.m_sol.ON(1, False)
                 
-            logging.info("ZONE INDEX : " + str(zone - 1) + " DST PSI : " + str(power) + " NOW PSI : " + str(avg_volt) + " ZONE TIMEOUT(s) : " + str(constant.zoneTimeout/10))
 
-            if (power > avg_volt):
+                #while count < constant.zoneTimeout:
+                voltList = []
+                while True:
+                    isPsi = True
+                    volt = self.m_psi.getVoltage()
+                    
+                    voltList.append(volt)
 
-                logging.info("AIR IN....")
-                self.m_pump.pumpON(False)
-                self.m_sol.OFF(1, False)
-                air = "IN"
+                    if len(voltList) == 5:
+                        isPsi = self.psiCheck(voltList)
+                        del voltList[0]
 
-            else:
-
-                air = "OUT"
-                logging.info("AIR OUT....")
-                self.m_pump.pumpOFF(False)
-                self.m_sol.ON(1, False)
-            
-
-            #while count < constant.zoneTimeout:
-            voltList = []
-            while True:
-                isPsi = True
-                volt = self.m_psi.getVoltage()
+                    logging.info("PSI: "+ str(volt))
+                    if ((air == "IN") and (volt - power) > 0) or \
+                        ((air == "OUT") and (volt - power) < 0) or \
+                        (self.m_isMode == False) or (isPsi == False):                   
+                        break
                 
-                voltList.append(volt)
+                    time.sleep(0.01)
 
-                if len(voltList) == 5:
-                    isPsi = self.psiCheck(voltList)
-                    del voltList[0]
+                self.m_pump.pumpOFF(True) 
+                self.m_sol.OFF(1, True)
+                self.m_sol.OFF(zone, False)
+                
+        elif _power == "out":
+            self.m_sol.ON(1, False)
+            for power, zone in zip (_zone, zoneIndex):
+                self.m_sol.ON(zone, True)
+                count = 0
+                while count < constant.zoneTimeout:
+                    count += 1
 
-                logging.info("PSI: "+ str(volt))
-                if ((air == "IN") and (volt - power) > 0) or \
-                    ((air == "OUT") and (volt - power) < 0) or \
-                    (self.m_isMode == False) or (isPsi == False):                   
-                    break
-               
-                time.sleep(0.01)
+                    if(count % 10 == 0):
+                        volt = self.m_psi.getVoltage()
+                        logging.info("now PSI : " + volt)
 
-            self.m_pump.pumpOFF(True) 
-            self.m_sol.OFF(1, True)
-            self.m_sol.OFF(zone, False)
+                    time.sleep(0.01)
+                self.m_sol.OFF(zone, True)
 
         self.m_sol.multiOFF(zoneIndex)
         self.m_sol.multiOFF(outSol)   

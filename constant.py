@@ -41,7 +41,7 @@ zoneTimeout = 800 #0.01s
 modeStopDelay = 3 #second
 zoneSoftDelay = 5 #second
 zoneHardDelay = 5 #second
-MeasureDelay = 2 #second
+MeasureDelay = 1 #second
 resetDelay    = 10 #second
 
 
