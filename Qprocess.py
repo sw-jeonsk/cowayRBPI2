@@ -480,7 +480,7 @@ class Qprocess(threading.Thread):
                 self.m_pump.pumpOFF(True) 
                 self.m_sol.OFF(1, True)
                 self.m_sol.OFF(zone, False)
-                
+
         elif _power == "out":
             self.m_sol.ON(1, False)
             for power, zone in zip (_zone, zoneIndex):
@@ -491,7 +491,7 @@ class Qprocess(threading.Thread):
 
                     if(count % 10 == 0):
                         volt = self.m_psi.getVoltage()
-                        logging.info("now PSI : " + volt)
+                        logging.info("now PSI : " + str(volt))
 
                     time.sleep(0.01)
                 self.m_sol.OFF(zone, True)
