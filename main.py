@@ -10,7 +10,9 @@ filemode='a', level=logging.DEBUG, format='[%(asctime)s][%(levelname)s] %(messag
 
 #todo client socket select로 처리하여,, recv데이터 send데이터 각자 놀도록 
 def main():
-    ip = "192.168.0.7"
+    #현재 코웨이에 설치되어 있는 침대 2대 (110, 210)    
+    ip = "192.168.0.110"
+    #ip = "192.168.0.210"
     port = 1114
     socketServer = server.socketServer(ip, port) 
     #TEST  

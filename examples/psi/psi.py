@@ -25,6 +25,11 @@ class psi():
         return processedData
     
     #original
+
+    def volt(self):
+        data = round(self.read(), 2)
+        return data
+
     def convertVoltage(self, bitValue, decimalPlaces=2):
         voltage = (bitValue * 3.3) / float(1023)
         voltage = round(voltage, decimalPlaces)
@@ -38,15 +43,14 @@ class psi():
 
         return voltage
 
-    #1 : voltage 계산을 4.5로 변경 
     def test_1(self, decimalPlaces=2):
         data = self.read()
-        voltage = (data * 4.5) / float(1023)
+        voltage = (data * 4.5) / float(1024)
         voltage = round(voltage, decimalPlaces)
         return voltage  
 
+    
 
-    #2 : psi 계산 공식 적용
     def test_2(self, decimalPlaces=2):
         data = self.read()
         voltage = (data * 3.3) / float(1023)
@@ -59,10 +63,9 @@ class psi():
 
         return psi      
 
-    #3 : psi 계산 공식 적용  + voltage 계산을 4.5로 변경
     def test_3(self, decimalPlaces=2):
         data = self.read()
-        voltage = (data * 4.5) / float(1023)
+        voltage = (data * 3.3) / float(1023)
         voltage = round(voltage, decimalPlaces)
 
         if (voltage < 0.5):
@@ -72,7 +75,12 @@ class psi():
 
         return psi  
 
-
+    def test_4(self, decimalPlaces=2):
+        data = self.read()
+        voltage = (data * 5) / float(1023)
+        voltage = round(voltage, decimalPlaces)
+        return voltage  
+        
     def spiClose(self):
         self.m_spi.close()
 

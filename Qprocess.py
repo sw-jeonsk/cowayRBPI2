@@ -60,6 +60,8 @@ class Qprocess(threading.Thread):
                 power = unit.POWER()
                 logging.info('cmd : ' + cmd + " power : " + power)
 
+
+                #각 Zone을 제어하는 request
                 if "zone_" in cmd:
 
                     zone = unit.ZONE()
@@ -67,12 +69,14 @@ class Qprocess(threading.Thread):
                     logging.info("send zone response") #jordan
                     unit.CLIENT()
 
+                #전체 Zone을 제어하는 request
                 elif "air" in cmd:
 
                     zone = unit.ZONE()
                     self.airEvent(power, zone)
                     unit.CLIENT()
 
+                #recliner head 관련 request
                 elif "head" in cmd:
 
                     if(self.headMode == False and self.m_isOperation == False):
@@ -93,7 +97,7 @@ class Qprocess(threading.Thread):
 
                         thread = threading.Thread(target=self.headEvent, args=(cmd, power))
                         thread.start()       
-
+                #recliner foot 관련 request
                 elif "foot" in cmd:
 
                     if(self.footMode == False and self.m_isOperation == False):
@@ -112,13 +116,14 @@ class Qprocess(threading.Thread):
 
                         thread = threading.Thread(target=self.footEvent, args=(cmd, power))
                         thread.start()                      
-                         
+                #light request             
                 elif "light" in cmd:
                     self.lightEvent(power)
 
                 elif "purifier" in cmd:
                     self.purifierEvent(power)
 
+                #bedtime 시나리오 request 
                 elif "bedtime" in cmd:
 
                     if(self.m_isMode):
@@ -128,8 +133,9 @@ class Qprocess(threading.Thread):
                     else:
                         self.m_isMode = True
                         thread = threading.Thread(target=self.bedtimeEvent, args=(power, unit))
-                        thread.start()             
+                        thread.start()   
 
+                #alignment 시나리오 request 
                 elif "alignment" in cmd:
                     
                     if(self.m_isMode):
@@ -141,7 +147,8 @@ class Qprocess(threading.Thread):
                         zone = unit.ZONE()
                         thread = threading.Thread(target=self.alignEvent, args=(power, zone))
                         thread.start()   
-                        
+
+                #wakeup 시나리오 request            
                 elif "wakeup" in cmd:
                     if(self.m_isMode):
 
@@ -151,8 +158,9 @@ class Qprocess(threading.Thread):
                     else:
                         time.sleep(1)
                         thread = threading.Thread(target=self.wakeupEvent, args=(power, unit))
-                        thread.start()             
+                        thread.start()   
 
+            #일정 주기로, 현재 psi 값 출력
             if(self.m_count >= 100):
                 volt = self.m_psi.getVoltage()
                 logging.info("NOW PSI : " + str(volt))
@@ -164,44 +172,47 @@ class Qprocess(threading.Thread):
             time.sleep(0.1)
         logging.info('Queue process thread the END')
     
-
-    # count동작시키기, 리클라이너 하나씩 동작시키기 
+    # 리클라이너 head
     def headEvent(self, _cmd, _power):
         
         self.m_reclinerHead.STOP()
 
-        if _cmd == "head":
+        
 
-            if _power != "stop":
+        if _power != "stop":
 
-                if _power == "up":
+            if _power == "up":
 
-                    self.m_reclinerHead.UP()
-                    logging.info("head up")
+                self.m_reclinerHead.UP()
+                logging.info("head up")
 
-                    for i in range(0, (constant.HeadDelay) * 10):
-                        if(self.headMode == False):
-                            break
+                for i in range(0, (constant.HeadDelay) * 10):
 
-                        
-                        time.sleep(0.1)
-                    self.m_reclinerHead.STOP()
-                    logging.info("head stop")
-                            
+                    #stop 또는 down request 받았을때, break로 빠져나감
+                    if(self.headMode == False):
+                        break
 
-                elif _power == "down":
-
-                    logging.info("head down")
-                    self.m_reclinerHead.DOWN()
-
-                    for i in range(0, (constant.HeadDelay-constant.HeadInterval) * 10):
-                        if(self.headMode == False):
-                            break
-
-                        time.sleep(0.1)
                     
-                    self.m_reclinerHead.STOP()   
-                    logging.info("head stop")
+                    time.sleep(0.1)
+                self.m_reclinerHead.STOP()
+                logging.info("head stop")
+                        
+
+            elif _power == "down":
+
+                logging.info("head down")
+                self.m_reclinerHead.DOWN()
+
+                for i in range(0, (constant.HeadDelay-constant.HeadInterval) * 10):
+
+                    #stop 또는 up request 받았을때, break로 빠져나감
+                    if(self.headMode == False):
+                        break
+
+                    time.sleep(0.1)
+                
+                self.m_reclinerHead.STOP()   
+                logging.info("head stop")
 
 
 
@@ -216,38 +227,38 @@ class Qprocess(threading.Thread):
         self.footMode= True  
         # stopEvent = True
 
-        if _cmd == "foot":
+        
 
-            if _power != "stop":
+        if _power != "stop":
 
-                if _power == "up":
+            if _power == "up":
 
 
-                    logging.info("Foot up" )
+                logging.info("Foot up" )
 
-                    self.m_reclinerFoot.UP()
+                self.m_reclinerFoot.UP()
 
-                    for i in range(0, constant.FootDelay * 10):
-                        if(self.footMode == False):
-                            break
+                for i in range(0, constant.FootDelay * 10):
+                    if(self.footMode == False):
+                        break
 
-                        time.sleep(0.1)
-                    self.m_reclinerFoot.STOP()
-                    logging.info("Foot  stop" )
+                    time.sleep(0.1)
+                self.m_reclinerFoot.STOP()
+                logging.info("Foot  stop" )
 
-                elif _power == "down":
+            elif _power == "down":
 
-                    self.m_reclinerFoot.DOWN()
-                    logging.info("foot down")
+                self.m_reclinerFoot.DOWN()
+                logging.info("foot down")
 
-                    for i in range(0, (constant.FootDelay - constant.FootInterval) * 10):
+                for i in range(0, (constant.FootDelay - constant.FootInterval) * 10):
 
-                        if(self.footMode == False):
-                            break
-                       
-                        time.sleep(0.1)
-                    logging.info("foot stop")
-                    self.m_reclinerFoot.STOP() 
+                    if(self.footMode == False):
+                        break
+                    
+                    time.sleep(0.1)
+                logging.info("foot stop")
+                self.m_reclinerFoot.STOP() 
 
             
 
@@ -309,18 +320,6 @@ class Qprocess(threading.Thread):
                 if self.m_isMode == False:
                     break
                 time.sleep(0.1)
-
-
-
-        # elif _power == "stop":
-        #     logging.info("------------bed Time Stop-------------")
-
-
-        #     self.m_reclinerFoot.STOP()
-        #     self.m_reclinerHead.STOP()    
-        #     #   
-        #     self.m_led.ledPWM(100)
-        #     _object.CLIENT()
         
         self.m_reclinerHead.STOP()         
         self.m_reclinerFoot.STOP()
@@ -394,6 +393,8 @@ class Qprocess(threading.Thread):
         self.m_isMode = False                 
         logging.info("WAKEUP : "+ _power + " ---------------END----------------")
 
+
+    #psi 연속으로 0값 체크
     def psiCheck(self ,_list):
         _value = False
         
@@ -403,6 +404,7 @@ class Qprocess(threading.Thread):
 
         return _value
 
+    #psi 평균값 계산
     def average(self, _list):
 
         _value = 0
@@ -425,17 +427,19 @@ class Qprocess(threading.Thread):
 
         if _power == "in":
             for power, zone in zip (_zone, zoneIndex):
-
+                
+                #request에서 각 zone에 대한 처리를 할 경우, 나머지 zone은 -1 수치 값으로 진행됨
+                #dictionary에 zone 수치가 -1은 넘기도록 구현했음
                 if power == -1:
                     continue
                     
                 self.m_sol.ON(zone, True)
                 time.sleep(constant.MeasureDelay)
-                
-                for i in range(0, 5):
+                voltList =[]
+                for i in range(0, 10):
                     volt = self.m_psi.getVoltage()
                     voltList.append(volt)
-                    time.sleep(0.1)
+                    time.sleep(0.01)
 
 
                 avg_volt = self.average(voltList)
@@ -458,22 +462,44 @@ class Qprocess(threading.Thread):
                 
 
                 #while count < constant.zoneTimeout:
-                voltList = []
+                
                 while True:
                     isPsi = True
                     volt = self.m_psi.getVoltage()
                     
-                    voltList.append(volt)
-
-                    if len(voltList) == 5:
-                        isPsi = self.psiCheck(voltList)
+                    if(len(voltList) == 10):
                         del voltList[0]
+                        voltList.append(volt)
+                        
+                        avg_volt = self.average(voltList)
 
-                    logging.info("PSI: "+ str(volt))
-                    if ((air == "IN") and (volt - power) > 0) or \
-                        ((air == "OUT") and (volt - power) < 0) or \
-                        (self.m_isMode == False) or (isPsi == False):                   
-                        break
+                    else:    
+                        voltList.append(volt)
+
+                    logging.info("PSI: "+ str(avg_volt))
+
+                    if air == "IN":
+                        #일정 변수를 곱하여, 현재 psi 값을 맞춤 
+                        if(avg_volt * 0.67  - power) > 0:
+                            self.m_sol.OFF(zone, True)
+                            self.m_pump.pumpOFF(True)
+                            self.m_sol.OFF(1, True)
+                            break
+                    
+                    if air == "OUT":
+                        #일정 변수를 곱하여, 현재 psi 값을 맞춤 
+                        if(avg_volt * 1.7 - power) < 0 or (avg_volt <= 0.21):
+                            self.m_sol.OFF(zone, True)
+                            self.m_pump.pumpOFF(True)
+                            self.m_sol.OFF(1, True)
+                            break
+
+                    if self.m_isMode == False or isPsi == False:
+                        self.m_sol.OFF(zone, True)
+                        self.m_pump.pumpOFF(True)
+                        self.m_sol.OFF(1, True)
+                        break        
+                   
                 
                     time.sleep(0.01)
 
@@ -518,10 +544,12 @@ class Qprocess(threading.Thread):
             self.m_sol.ON(zone, True)
             time.sleep(1)
             
-            for i in range(0, 5):
+            voltList =[]
+            for i in range(0, 10):
                 volt = self.m_psi.getVoltage()
                 voltList.append(volt)
-                time.sleep(0.1)
+                time.sleep(0.01)
+
 
             avg_volt = self.average(voltList)
                 
@@ -548,13 +576,40 @@ class Qprocess(threading.Thread):
                 # while True:
                 count += 1
                 volt = self.m_psi.getVoltage()
-                logging.info("PSI: "+ str(volt))
+                    
+                if(len(voltList) == 10):
+                    del voltList[0]
+                    voltList.append(volt)
+                    
+                    avg_volt = self.average(voltList)
 
-                if  (air == "IN" and (volt - power) > 0) or \
-                    (air == "OUT" and (volt - power) < 0) or \
-                    (self.m_isMode == False):                   
+                else:    
+                    voltList.append(volt)
+
+                logging.info("PSI: "+ str(avg_volt))
+
+                if air == "IN":
+                    if(avg_volt * 0.67  - power) > 0:
+                        self.m_sol.OFF(zone, True)
+                        self.m_pump.pumpOFF(True)
+                        self.m_sol.OFF(1, True)
+                        break
                 
-                    break
+                if air == "OUT":
+                    if(avg_volt * 1.7 - power) < 0 or (avg_volt <= 0.21):
+                        self.m_sol.OFF(zone, True)
+                        self.m_pump.pumpOFF(True)
+                        self.m_sol.OFF(1, True)
+                        break
+
+                if self.m_isMode == False:
+                    self.m_sol.OFF(zone, True)
+                    self.m_pump.pumpOFF(True)
+                    self.m_sol.OFF(1, True)
+                    break        
+                
+                
+                    time.sleep(0.01)
                 
                 time.sleep(0.01)
 

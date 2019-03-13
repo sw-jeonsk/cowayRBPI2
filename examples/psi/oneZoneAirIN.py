@@ -16,15 +16,17 @@ def main():
 
 
     try:
-        m_sol.ON(4, True)
+        m_sol.ON(5, True)
         m_pump.pumpON(True)
+        psi = 1.0
 
         while True:
-            volt = m_psi.getVoltage()
+            test_1 = m_psi.test_1()
+            psi = m_psi.test_3()
 
-            print("value : " + str(volt))
+            print("test_1 : " + str(test_1) + " test_3 " + str(psi))
 
-            time.sleep(0.1)
+            time.sleep(0.01)
 
 
     except KeyboardInterrupt:            

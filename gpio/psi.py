@@ -33,7 +33,7 @@ class psi():
         else:
             psi = round((voltage - 0.5) * 10 / 8, decimalPlaces)
 
-        return voltage
+        return psi
 
     def getVoltage(self):
         data = self.read()

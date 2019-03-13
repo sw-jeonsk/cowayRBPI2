@@ -36,7 +36,7 @@ open_zone_2 = 6 #second
 open_zone_3 = 7 #second
 open_zone_4 = 7 #second
 zone_interval = 1 #second
-zoneTimeout = 800 #0.01s
+zoneTimeout = 700 #0.01s
 ######control
 modeStopDelay = 3 #second
 zoneSoftDelay = 5 #second
@@ -52,9 +52,9 @@ wakeUpBrightEnd = 100
 
 #recliner
 HeadDelay = 15 #second
-HeadInterval = 1 
+HeadInterval = 0 
 FootDelay = 9
-FootInterval = 1
+FootInterval = 0
 
 WaitTime = 2
 
